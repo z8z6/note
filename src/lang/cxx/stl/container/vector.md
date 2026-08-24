@@ -40,7 +40,7 @@ vector 迭代器持续有效，除非发生两种情况:
 收缩 vector 容量，但不保证 `capacity() == size() + 1`
 
 ```c++
-std::vector<int\> v = { 10, 1, 2, 3};
+std::vector<int> v = { 10, 1, 2, 3};
 v.shrink_to_fit();
 ```
 
@@ -57,7 +57,7 @@ v.data()    // better
 v.begin()   // maybe not portable
 ```
 
-4. vector<bool>
+4. `vector<bool>`
 
 对于 bool 进行位运算优化；如果大小固定，应当采用 bitset.
 
