@@ -1,5 +1,6 @@
 import { h } from 'vue'
 import DefaultTheme from 'vitepress/theme'
+import CodePlayground from '../components/CodePlayground.vue'
 import './style.css'
 
 export default {
@@ -8,4 +9,7 @@ export default {
     'layout-top': () => h('div', { class: 'site-scanlines', 'aria-hidden': 'true' }),
     'doc-before': () => h('div', { class: 'document-coordinate', 'aria-hidden': 'true' }, 'ARCHIVE / ACTIVE RECORD'),
   }),
+  enhanceApp({ app }) {
+    app.component('CodePlayground', CodePlayground)
+  },
 }
