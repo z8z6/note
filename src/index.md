@@ -1,22 +1,15 @@
 ---
-layout: home
-
-hero:
-  name: "Winter, Rain and Taipei"
-  text: "My Blog"
-  tagline: step by step, coding first
-  image:
-    src: /rust-killer.png
-
-features:
-  - title: C and C++
-    details: the real language for programmers
-    link: /lang/cxx
-  - title: Compiler, Assembler and Linker
-    details: it's too late to start
-    link: /cc
-  - title: GPU and CPU arch
-    details: something magic
-    link: aarch
+layout: page
+title: CXXCXX Field Notes
+description: 编程、系统与数字世界的个人技术档案
+sidebar: false
+aside: false
+footer: true
+pageClass: field-home-page
 ---
 
+<script setup>
+import HomePage from '../.vitepress/components/HomePage.vue'
+</script>
+
+<HomePage />
