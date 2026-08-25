@@ -34,7 +34,6 @@ jobs:
       - run: npm run build
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TRANSLATION_REQUIRED: '1'
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
