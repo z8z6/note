@@ -20,7 +20,8 @@ npm run preview
 
 ## 内容约定
 
-文章保存在 `src/`。新文章建议至少提供标题和摘要：
+中文是唯一需要维护的源内容，文章直接保存在 `src/`。不要手动编辑
+`src/en/`：它由翻译脚本生成，并已被 Git 忽略。新文章建议至少提供标题和摘要：
 
 ```yaml
 ---
@@ -42,6 +43,22 @@ const example = `console.log('hello')`
 <CodePlayground title="最小实验" :code="example" />
 ```
 
+静态文件保存在仓库根目录的 `public/`。
+
+## 英文翻译
+
+设置 OpenAI API key 后运行：
+
+```bash
+npm run translate
+```
+
+脚本使用文件哈希增量生成 `src/en/`，默认模型为 `gpt-5.4-mini`。如需指定模型，
+可设置 `OPENAI_TRANSLATION_MODEL`。`npm run build` 会自动先运行翻译；未配置 key
+时，本地构建会跳过尚未生成的英文文件。
+
 ## 部署
 
-推送到 `master` 后，GitHub Actions 会构建 `.vitepress/dist` 并部署到 GitHub Pages。自定义域名由 `src/public/CNAME` 提供。
+推送到 `master` 后，GitHub Actions 会增量生成英文、构建 `.vitepress/dist` 并部署到
+GitHub Pages。仓库需要配置 Actions secret `OPENAI_API_KEY`，CI 中缺少该 secret
+会直接失败，避免部署不完整的英文站点。自定义域名由 `public/CNAME` 提供。

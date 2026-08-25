@@ -1,136 +1,59 @@
-# unique ptr
+# std::unique_ptr
 
-独占资源，用来替代 auto_ptr。主要用于 new 声明的函数局部变量，
-由于可能有异常等情况，可能无法正常处理，而 unique_ptr 可以解决这种情况。
+`std::unique_ptr<T>` 表达独占所有权：任意时刻只有一个智能指针负责释放资源。它体积小、可移动，通常是动态资源所有权的默认选择。
 
-`unique_ptr`
+## 创建与转移
 
-## 声明
+```cpp
+auto point = std::make_unique<Point>(1, 2);
+auto next = std::move(point);
 
-```c++
-unique_ptr(pointer __p, const deleter_type& __d)
+assert(!point);
+assert(next);
 ```
 
-## 用法
+它不能复制，但可以移动。函数按值接收表示转移所有权，按 `const unique_ptr<T>&` 接收通常不如直接接收 `const T&` 清晰。
 
-1. 不允许 copy 和 assignment
+```cpp
+std::unique_ptr<Point> create_point();
+void consume(std::unique_ptr<Point> point);
 
-```c++
-unique_ptr(const unique_ptr&) = delete;
-unique_ptr& operator=(const unique_ptr&) = delete;
+auto point = create_point();
+consume(std::move(point));
 ```
 
-不允许 copy 和 assignment，只能在构造时初始化，但可以使用移动语义。
-注意，这会导致包含 unique_ptr 的 class 无法使用默认的 copy 和 assignment 函数。
+返回局部 `unique_ptr` 时可直接 `return point;`，编译器会执行复制消除或隐式移动。
 
-```c++
-class Point{
+## 作为类成员
+
+```cpp
+class Scene {
 public:
-    int x,y,z;
-};
-
-int main(int argc, char **argv) {
-    std::unique_ptr<Point> ptr(new Point());    // ok
-    std::unique_ptr<Point> ptr1 = ptr;          // wrong!!!
-    std::unique_ptr<Point> ptr2 = std::move(ptr); // OK
-}
-```
-
-注意 auto_ptr 的赋值操作是 copy 语义。
-
-2. 可以作判断是否为空
-
-```c++
-explicit operator bool() const noexcept
-{
-    return get() == pointer() ? false : true;
-}
-```
-
-注意此处虽然声明为 explicit, 但可以在 if 和逻辑运算符中隐式使用。
-
-```c++
-class Point{
-public:
-    int x,y,z;
-};
-
-int main(int argc, char **argv) {
-    std::unique_ptr<Point> ptr(new Point());
-    if(ptr){
-        std::cout<< ptr->x;
-    }
-}
-```
-
-3. 作为函数参数和返回值进行转移
-
-```c++
-std::unique_ptr<Point> source(){
-    auto ptr = std::make_unique<Point>();
-    return ptr;     // auto move
-}
-```
-
-```c++
-void sink(std::unique_ptr<Point> ptr);
-
-int main(int argc, char **argv) {
-    std::unique_ptr<Point> ptr(new Point());
-    sink(std::move(ptr));
-}
-```
-
-4. 作为类成员
-
-在 class 内使用 unique_ptr 可避免资源泄漏。如果你使用 unique_ptr 取代寻常 pointer，
-就不再需要析构函数，因为对象被删除会连带使所有成员被删除。
-此外 unique-ptr 也可协助避免对象初始化期间因抛出异常而造成资源泄漏。
-注意，只有当一切构造动作都完成了，
-析构函数才有可能被调用。因此一旦构造期间发生异常，只有那些已完全构造好的对象，
-其析构函数才会被调用。所以，对于拥有多个 rawpointer 的 class，
-如果构造期间第一个 new 成功而第二个失败，就可能导致资源泄漏。
-
-使用 unique_ptr 可以自动调用 delete，无需手动编写 delete 函数。
-但是需要写 copy 和 assignment 函数。
-
-```c++
-class Point {
-public:
-    int x;
-    Point():x(0){}
-};
-
-
-class A{
-public:
-    std::unique_ptr<Point> p;
-
-    A():p(new Point()){}
-
-    A(const A& other){
-        *p = *other.p;
-    }
-
-    A& operator= (const A& other){
-        *p = *other.p;
-        return *this;
-    }
+    Scene() : root_(std::make_unique<Node>()) {}
+private:
+    std::unique_ptr<Node> root_;
 };
 ```
 
-5. 对于数组
+RAII 会自动清理已经成功构造的成员。包含 `unique_ptr` 的类默认不可复制但可以移动；若需要复制，应实现明确的深复制语义。
 
-```c++
-template<typename _Tp, typename _Dp>
-class unique_ptr<_Tp[], _Dp>
+## 数组与删除器
+
+```cpp
+auto bytes = std::make_unique<std::byte[]>(4096);
+
+using File = std::unique_ptr<FILE, decltype(&std::fclose)>;
+File file(std::fopen("data.txt", "r"), &std::fclose);
 ```
 
-```c++
-int main() {
-    std::unique_ptr<Point[]> ptr(new Point[10]);
-    return 0;
-}
-```
+动态数组特化使用 `delete[]`，但多数可变长度数组仍应使用 `vector`。自定义删除器是指针类型的一部分，适合包装 C API 句柄。
 
-6. 定义自己的 deleter
+## release、reset 与 get
+
+- `get()`：只观察裸指针，不改变所有权。
+- `reset(ptr)`：释放旧资源并接管新资源。
+- `release()`：放弃所有权并返回裸指针，不会释放资源。
+
+::: warning
+`release()` 很容易造成泄漏，只应用于把所有权交给明确接管裸指针的旧接口。
+:::

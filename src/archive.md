@@ -1,6 +1,6 @@
 ---
 title: 档案索引
-description: 按主题浏览 CXXCXX 的技术记录
+description: 按主题浏览技术记录
 ---
 
 # 档案索引
@@ -20,7 +20,7 @@ description: 按主题浏览 CXXCXX 的技术记录
 
 - [GCC 选项](/cc/gcc/options)
 - [Git 命令](/git/cmd)
-- [Bash](/lang/bash)
+- [Bash](/lang/bash/bash)
 - [汇编与 i386](/lang/asm/i386/)
 
 ## 实验

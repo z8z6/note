@@ -1,10 +1,10 @@
 ---
 title: 关于这座档案站
-description: CXXCXX 的记录原则与设计来源
+description: 个人博客的记录原则与设计来源
 outline: false
 ---
 
-# 关于 CXXCXX
+# 关于博客
 
 这里是一个以 Markdown 为底稿、以代码为主要语言的个人技术档案。
 

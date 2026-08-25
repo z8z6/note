@@ -1,10 +1,10 @@
 ---
 layout: page
-title: CXXCXX Field Notes
-description: 编程、系统与数字世界的个人技术档案
+title: z8z6 Notes
+description: 个人博客
 sidebar: false
 aside: false
-footer: true
+footer: false
 pageClass: field-home-page
 ---
 

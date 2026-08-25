@@ -1,0 +1,19 @@
+Operator avatar sources
+=======================
+
+Downloaded from PRTS Wiki file pages for use as local operator switcher thumbnails:
+
+- Amiya: https://prts.wiki/w/文件:头像_阿米娅.png
+- W: https://prts.wiki/w/文件:头像_W.png
+- Kal'tsit: https://prts.wiki/w/文件:头像_凯尔希.png
+- Surtr: https://prts.wiki/w/文件:头像_史尔特尔.png
+
+Elite artwork used as low-opacity page silhouettes:
+
+- Amiya: https://prts.wiki/w/文件:立绘_阿米娅_2.png
+- W: https://prts.wiki/w/文件:立绘_W_2.png
+- Kal'tsit: https://prts.wiki/w/文件:立绘_凯尔希_2.png
+- Surtr: https://prts.wiki/w/文件:立绘_史尔特尔_2.png
+
+The game images and character artwork are property of Hypergryph / their respective rights holders.
+They are retained here for identification and non-commercial fan presentation.

@@ -1,57 +1,52 @@
 # decltype
 
-用于获取一个变量或表达式的类型，一般用于泛型和 Lamda 获取类型。
+`decltype(expression)` 在不执行表达式的情况下取得其类型，常用于泛型代码、尾置返回类型和精确保留引用属性。
 
-这是一个关键字。
+## 两套规则
 
-## 用法
+当参数是未加括号的变量名或成员访问时，`decltype` 得到该实体声明的类型；其他表达式则按值类别推导：左值得到 `T&`，将亡值得到 `T&&`，纯右值得到 `T`。
 
-```c++
-template <typename _Tx, typename _Ty>
-auto multiply(_Tx x, _Ty y) -> decltype(x * y)
-{
-    return x * y;
+```cpp
+int value = 0;
+int& reference = value;
+
+decltype(value) a = 1;        // int
+decltype(reference) b = value; // int&
+decltype((value)) c = value;  // int&，括号使它走表达式规则
+decltype(value + 1) d = 2;    // int
+```
+
+## 泛型返回类型
+
+```cpp
+template<class Left, class Right>
+auto multiply(Left left, Right right)
+    -> decltype(left * right) {
+    return left * right;
 }
 ```
 
+C++14 后也可让普通 `auto` 从返回表达式推导类型，但 `auto` 会丢弃顶层引用。需要完整保留表达式类型时使用 `decltype(auto)`。
 
-## 注意
-
-1. 三目运算符
-
-对于三目运算符返回的值，可能是左值，也可能是右值。如果任何情况下返回值都可以是左值，则返回值为左值；
-如果有一种情况下是右值，则返回右值。
-
-```c++
-int i = 0;
-true ? i : i = 10;  // 左值
-i = true ? i : 10;  // 右值
-
-decltype (true ? i : i) var1 = i;    //  int&  
-decltype (true ? i : 10) var2 = i;   //  int
+```cpp
+decltype(auto) element(std::vector<int>& values, std::size_t index) {
+    return values[index]; // 返回 int&
+}
 ```
 
-2. ++
+## 表达式示例
 
-前++返回左值，后++返回右值。
-
-```c++
-int i 10;
-++++i = 10;   // 左值
-i++;     // 右值
-
-decltype (++i) var1 = i;    // int&
-decltype (i++) var2 = i;    // int 
-```
-
-3. 任何对变量名称的操作都优先返回左值
-
-```c++
-int arr[10];
-int* ptr = arr;
+```cpp
 int i = 10;
+decltype(++i) first = i; // int&，前置 ++ 返回左值
+decltype(i++) second = 0; // int，后置 ++ 返回纯右值
 
-decltype ((i)) var6 = i;     // int&
-decltype(arr[5]) var9 = 1;  // int&
-decltype(*ptr)  var10 = 1;    // int& 
+int* pointer = &i;
+decltype(*pointer) third = i; // int&
 ```
+
+条件表达式的类型由两侧操作数共同决定，不宜只靠“其中是否有右值”判断。实际使用中可通过 `static_assert(std::is_same_v<...>)` 验证复杂推导。
+
+::: warning
+`decltype(auto)` 对括号敏感：返回局部变量时，`return (local);` 会推导为悬空引用。除非确实要保留引用，否则不要给返回表达式添加多余括号。
+:::

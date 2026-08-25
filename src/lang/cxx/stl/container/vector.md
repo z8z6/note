@@ -1,83 +1,62 @@
-# vector
+# std::vector
 
-`vector`
-`stl_bvector.h`
+`std::vector<T>` 是动态长度的连续数组，也是大多数顺序数据的默认容器。它支持 O(1) 随机访问，尾部插入具有均摊 O(1) 复杂度。
 
-##
+## size 与 capacity
 
-## Usage
-
-1. reserve()
-
-Vector 的容量之所以重要，有两个原因:
-
-    1. 一旦内存重新分配，vector 元素相关的所有 reference、pointer、iterator 都会失效
-    2. 内存重新分配很耗时间。
-
-你可以使用 reserve()保留适当容量，避免重新分配内存。
-如此一来，只要保留的容量尚有富余，就不必担心 reference 失效。
-
-```c++
-std::vector<int>v;  //create an empty vector
-v.reserve(80);      // reserve memory for 80 elements
+```cpp
+std::vector<int> values;
+values.reserve(80); // 只预留存储，不创建元素
+values.resize(20);  // 改变元素数量
 ```
 
-::: warning
+`size()` 是当前元素数，`capacity()` 是无需重新分配即可容纳的元素数。`reserve(n)` 只在 `n > capacity()` 时扩容；提前知道大致数量时可减少重分配。
 
-vector 迭代器持续有效，除非发生两种情况:
+## 迭代器失效
 
-1. 使用者在一个较小索引位置上安插或移除元素
-2. 由于容量变化而引起内存重新分配。
+- 发生重新分配：所有迭代器、指针和引用失效。
+- 未重新分配的尾部插入：`end()` 失效，既有元素引用保持有效。
+- 中间插入或删除：操作位置及其后的迭代器、指针和引用失效。
 
-安插或移除元素，都会使作用点之后的各元素的 reference、pointer 和 iterator 失效。
-如果安插动作甚至引发内存重新分配，并那么该容器身上的所有 reference、pointer 和 iterator 都失效。
+```cpp
+auto position = values.begin() + 2;
+position = values.erase(position); // 使用返回的下一个有效位置
+```
 
-在 for loop,中是否可以提前预留空间以保证支持 insert 操作？
+仅 `reserve` 足够容量不能让中间插入变安全，因为元素移动仍会使操作点后的引用失效。
+
+## 添加元素
+
+```cpp
+values.push_back(42);
+
+std::vector<Point> points;
+points.emplace_back(1, 2); // 在尾部直接构造 Point
+```
+
+`emplace_back` 不是总比 `push_back` 快；已有对象时 `push_back(object)` 意图通常更明确。C++17 起 `emplace_back` 返回新元素引用。
+
+## 删除与收缩
+
+```cpp
+std::erase_if(values, [](int value) { return value < 0; }); // C++20
+values.shrink_to_fit(); // 非强制请求
+```
+
+`clear()` 删除元素但通常保留容量。`shrink_to_fit()` 不保证一定收缩；频繁收缩再增长会造成额外分配。
+
+## data 与互操作
+
+```cpp
+consume(values.data(), values.size());
+```
+
+存储连续意味着可以与接收指针和长度的 C API 互操作。空 `vector` 的 `data()` 可以传递，但不能解引用。
+
+## `vector<bool>` 特化
+
+`vector<bool>` 是按位压缩的特化，`operator[]` 返回代理对象而不是 `bool&`。需要稳定引用或普通并发写语义时，应考虑 `vector<std::uint8_t>`；固定长度位集合可用 `std::bitset`。
+
+::: tip
+除非测量显示其他数据结构更合适，顺序数据优先使用 `vector`：连续布局通常带来更好的缓存局部性。
 :::
-
-2. shrink_to_fit()
-
-收缩 vector 容量，但不保证 `capacity() == size() + 1`
-
-```c++
-std::vector<int> v = { 10, 1, 2, 3};
-v.shrink_to_fit();
-```
-
-还有一种方法，通过创建临时对象并交换元素实现容量的缩减。
-
-`std::vector<int>(v).swap(v);`
-
-3. data()
-
-获取指向第一个元素的地址。
-
-```c++
-v.data()    // better
-v.begin()   // maybe not portable
-```
-
-4. `vector<bool>`
-
-对于 bool 进行位运算优化；如果大小固定，应当采用 bitset.
-
-```c++
-std::vector<bool> v = {};
-std::_Bit_reference b = v[0];
-b.flip();
-```
-
-使用 Proxy, 返回类型是\_Bit_reference，可以隐式转换为 bool
-
-```c++
-struct _Bit_reference
-{
-    _Bit_type * _M_p;
-    _Bit_type _M_mask;
-
-    operator bool() const noexcept
-    {
-        return !!(*_M_p & _M_mask);
-    }
-}
-```

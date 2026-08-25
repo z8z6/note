@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npm run translate",
     "dev": "vitepress dev",
+    "translate": "node scripts/translate.mjs",
+    "prebuild": "npm run translate",
     "build": "vitepress build",
     "preview": "vitepress preview"
   },

@@ -24,6 +24,30 @@ await wait(240)
 console.log('03 / 解析完成')
 
 return { status: 'online', latency: '480ms' }`
+
+const ownershipCompare = [
+  {
+    title: 'RAW POINTER',
+    language: 'cpp',
+    code: `Widget* widget = new Widget();
+widget->run();
+delete widget;`
+  },
+  {
+    title: 'UNIQUE OWNERSHIP',
+    language: 'cpp',
+    code: `auto widget = std::make_unique<Widget>();
+widget->run();
+// 自动释放资源`
+  },
+  {
+    title: 'SHARED OWNERSHIP',
+    language: 'cpp',
+    code: `auto widget = std::make_shared<Widget>();
+auto observer = widget;
+widget->run();`
+  }
+]
 </script>
 
 # 交互实验室
@@ -41,6 +65,12 @@ return { status: 'online', latency: '480ms' }`
 Worker 支持 `async/await`，因此也能观察异步任务的执行顺序。这个环境没有页面 DOM，适合纯逻辑和算法实验。
 
 <CodePlayground title="LAB–002 / ASYNC SIGNAL" :code="asyncDemo" :timeout="4000" />
+
+## 多版本代码对比
+
+`CodeCompare` 接收任意数量的代码项，并将它们横向排列。列数超过可用宽度时，可以沿水平方向滚动查看。标题栏默认合并为连续界面，使用 `:merge-headers="false"` 可以恢复独立卡片。
+
+<CodeCompare title="OWNERSHIP STRATEGIES" :items="ownershipCompare" :min-width="300" />
 
 ## 能力边界
 

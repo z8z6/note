@@ -1,62 +1,42 @@
-# ios base
+# std::ios_base
 
-`ios_base.h`
+`std::ios_base` 保存与字符类型无关的流配置：格式标志、状态位、打开模式、定位方向和 locale。具体字符流通过 `basic_ios` 继承它。
 
-## declare
+## 状态位
 
-## Usage
-
-1. _Io_Iostate
-
-```c++
-enum _Ios_Iostate
-{ 
-    _S_goodbit 		    = 0,
-    _S_badbit 		    = 1L << 0,
-    _S_eofbit 		    = 1L << 1,
-    _S_failbit		    = 1L << 2,
-    _S_ios_iostate_end  = 1L << 16,
-    _S_ios_iostate_max  = __INT_MAX__,
-    _S_ios_iostate_min  = ~__INT_MAX__
-};
+```cpp
+std::ios::iostate state = stream.rdstate();
+if (state & std::ios::eofbit)  { /* 到达末尾 */ }
+if (state & std::ios::failbit) { /* 格式提取失败 */ }
+if (state & std::ios::badbit)  { /* 底层 I/O 错误 */ }
 ```
 
-2. _Ios_Fmtflags
+状态位可以组合。`goodbit` 的值为零，因此不能用按位与判断它，应使用 `good()` 或比较完整状态。
 
-```c++
-enum _Ios_Fmtflags 
-{ 
-    _S_boolalpha 	= 1L << 0,
-    _S_dec 		    = 1L << 1,
-    _S_fixed 		= 1L << 2,
-    _S_hex 		    = 1L << 3,
-    _S_internal 	= 1L << 4,
-    _S_left 		= 1L << 5,
-    _S_oct 		    = 1L << 6,
-    _S_right 		= 1L << 7,
-    _S_scientific 	= 1L << 8,
-    _S_showbase 	= 1L << 9,
-    _S_showpoint 	= 1L << 10,
-    _S_showpos 	    = 1L << 11,
-    _S_skipws 	    = 1L << 12,
-    _S_unitbuf 	    = 1L << 13,
-    _S_uppercase 	= 1L << 14,
-    _S_adjustfield 	= _S_left | _S_right | _S_internal,
-    _S_basefield 	= _S_dec | _S_oct | _S_hex,
-    _S_floatfield 	= _S_scientific | _S_fixed,
-    _S_ios_fmtflags_end = 1L << 16,
-    _S_ios_fmtflags_max = __INT_MAX__,
-    _S_ios_fmtflags_min = ~__INT_MAX__
-};
-```
+## 格式标志
 
-```c++
-// set flags showpos and uppercase
+```cpp
 std::cout.setf(std::ios::showpos | std::ios::uppercase);
-
-// set only the flag hex in the group basefield
 std::cout.setf(std::ios::hex, std::ios::basefield);
-
-// clear the flag uppercase
 std::cout.unsetf(std::ios::uppercase);
 ```
+
+`basefield`、`floatfield`、`adjustfield` 是互斥标志组。带掩码的 `setf(flag, mask)` 会先清除该组，再设置目标值。
+
+## 保存与恢复格式
+
+```cpp
+const auto flags = std::cout.flags();
+const auto precision = std::cout.precision();
+
+std::cout << std::hex << std::showbase << 255;
+
+std::cout.flags(flags);
+std::cout.precision(precision);
+```
+
+库函数若临时改变调用方传入流的格式，应该在返回前恢复状态。工程中可用一个小型 RAII guard 自动完成恢复。
+
+## sync_with_stdio
+
+`std::ios_base::sync_with_stdio(false)` 可解除 C++ 流与 C stdio 的同步，通常在程序开始且尚未进行 I/O 时调用。解除后混用两套 I/O 的相对顺序不再可靠。

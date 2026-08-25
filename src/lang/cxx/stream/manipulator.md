@@ -1,43 +1,51 @@
-# Manipulator
+# 流操纵器
 
-`ostream`
-`iomanip`
+操纵器是可以插入流表达式的函数或对象，用于改变格式或执行动作。流的 `operator<<` / `operator>>` 提供接收函数指针的重载。
 
-## declare
+## 无参数操纵器
 
-```c++
-__ostream_type&
-operator<< (__ostream_type& (*__pf)(__ostream_type&))
-{
-    return __pf(*this);
+```cpp
+std::cout << "done" << std::endl;
+```
+
+`std::endl` 写入换行并刷新，概念上类似：
+
+```cpp
+template<class CharT, class Traits>
+std::basic_ostream<CharT, Traits>&
+endl(std::basic_ostream<CharT, Traits>& out) {
+    return flush(out.put(out.widen('\n')));
 }
 ```
 
-operator << 接受函数指针并调用。
+由于参数依赖查找，即使写成 `endl(std::cout)`，编译器也能在 `std` 命名空间找到候选；实际代码仍建议明确使用 `std::endl`。
 
-## Usage
+## 常用格式
 
-1. endl
+```cpp
+#include <iomanip>
 
-endl 是一个函数
+std::cout << std::left << std::setw(10) << std::setfill('.') << "PRTS";
+std::cout << std::fixed << std::setprecision(2) << 3.14159;
+std::cout << std::hex << std::showbase << 255;
+```
 
-```c++
-template<typename _CharT, typename _Traits>
-inline basic_ostream<_CharT, _Traits>&
-endl(basic_ostream<_CharT, _Traits>& __os)
-{
-    return flush(__os.put(__os.widen('\n')));
+- `setw` 只影响下一次格式化字段。
+- `setfill`、`left`、`fixed` 等会持续生效。
+- `quoted` 可按带引号字符串写入和读取，适合包含空格的简单文本格式。
+
+## 输入控制
+
+```cpp
+std::cin >> std::noskipws;
+char ch{};
+while (std::cin >> ch) {
+    // 空白字符也会被提取
 }
 ```
 
-```c++
-endl(std::cout);
-```
+`skipws` / `noskipws` 控制格式化字符输入是否跳过前导空白，`std::ws` 则立即消费当前连续空白。
 
-因为如果全局空间中找不到 endl，编译器会自动在其实参定义所在的命名空间中查找,
-这称为 ADL(argument-dependent lookup;也被称为 Koenig lookup)。
-
-2. setw, setfill, left, right, internal
-
-
-3. skipws
+::: tip
+一般输出换行用 `'\n'`；只有确实要求立即刷新时才使用 `std::endl`。
+:::
