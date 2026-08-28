@@ -48,6 +48,14 @@ auto observer = widget;
 widget->run();`
   }
 ]
+
+const chartDemo = [
+  { label: 'C++', value: 31 },
+  { label: 'I/O', value: 18 },
+  { label: 'STL', value: 14 },
+  { label: '工具链', value: 9 },
+  { label: '系统', value: 7 }
+]
 </script>
 
 # 交互实验室
@@ -71,6 +79,50 @@ Worker 支持 `async/await`，因此也能观察异步任务的执行顺序。�
 `CodeCompare` 接收任意数量的代码项，并将它们横向排列。列数超过可用宽度时，可以沿水平方向滚动查看。标题栏默认合并为连续界面，使用 `:merge-headers="false"` 可以恢复独立卡片。
 
 <CodeCompare title="OWNERSHIP STRATEGIES" :items="ownershipCompare" :min-width="300" />
+
+## 并列表格
+
+`ParallelTables` 保留 Markdown 表格语法，并让不同维度的数据并排阅读。每个直接子元素是一张独立面板；小屏幕会自动纵向排列。
+
+<ParallelTables title="SEQUENCE CONTAINERS" :columns="2" :min-width="280">
+
+<div>
+
+### 连续存储
+
+| 容器 | 随机访问 | 中间插入 |
+| --- | --- | --- |
+| `vector` | O(1) | O(n) |
+| `array` | O(1) | 不支持 |
+
+</div>
+
+<div>
+
+### 链式存储
+
+| 容器 | 随机访问 | 已知位置插入 |
+| --- | --- | --- |
+| `list` | O(n) | O(1) |
+| `forward_list` | O(n) | O(1) |
+
+</div>
+
+</ParallelTables>
+
+## 数据图表
+
+图表组件共享 `{ label, value, color? }` 数据格式，使用原生 SVG 绘制，不加载第三方图表运行时。
+
+<ComponentGroup title="CHART COMPONENT GROUP" :slots="3" layout="row" :min-width="360" mobile="stack">
+
+<BarChart title="NOTE DISTRIBUTION / 柱形图" :data="chartDemo" suffix=" 篇" />
+
+<LineChart title="SIGNAL TREND / 折线图" :data="chartDemo" :area="true" />
+
+<PieChart title="ARCHIVE SHARE / 饼图" :data="chartDemo" :donut="true" />
+
+</ComponentGroup>
 
 ## 能力边界
 

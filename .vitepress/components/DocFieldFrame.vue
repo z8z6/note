@@ -33,9 +33,7 @@ const clearance = computed(() => {
 <template>
   <aside class="doc-field-frame" aria-label="文档档案信息">
     <div class="doc-field-frame__brand" aria-hidden="true">
-      <span class="doc-field-frame__tower" />
-      <span class="doc-field-frame__orbit" />
-      <b>RI</b>
+      <img src="/prts-icon-hd.png" alt="">
     </div>
     <div class="doc-field-frame__main">
       <span class="doc-field-frame__eyebrow">RHODES ISLAND · PRTS KNOWLEDGE TERMINAL</span>

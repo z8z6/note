@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useData } from "vitepress";
 import ParticleField from "./ParticleField.vue";
+import { data as noteData } from "../archive.data";
 
 type ThemeId = "amiya" | "w" | "kaltsit" | "surtr";
 const { lang } = useData();
@@ -114,26 +115,29 @@ const text = computed(() =>
         footerLead: "项目、游戏与仍在持续更新的外部信号。",
       },
 );
-const articles = computed(() =>
-  isEnglish.value
+const articles = computed(() => {
+  const entries = isEnglish.value
     ? [
         [
           "C++",
           "Understanding std::expected in C++23",
           "Error handling, expression design, and performance.",
-          "/en/lang/cxx/",
+          "/en/language/cxx/",
+          "/note-covers/cpp-logo.webp",
         ],
         [
           "SYSTEMS",
           "Rvalue References and Move Semantics",
           "Follow ownership through the abstraction layers.",
-          "/en/lang/cxx/0x/rvalue_ref",
+          "/en/language/cxx/0x/rvalue_ref",
+          "/note-covers/cpp-logo.webp",
         ],
         [
           "TOOLS",
           "Building a Reusable C++ Field Kit",
           "Compiler options, Git, and repeatable experiments.",
-          "/en/cc/gcc/options",
+          "/en/compile/gcc/options",
+          "/note-covers/gcc-logo.png",
         ],
       ]
     : [
@@ -141,60 +145,52 @@ const articles = computed(() =>
           "C++",
           "深入理解 C++23 的 std::expected",
           "从错误处理到表达式设计，追踪抽象背后的实际成本。",
-          "/lang/cxx/",
+          "/language/cxx/",
+          "/note-covers/cpp-logo.webp",
         ],
         [
           "SYSTEMS",
           "右值引用与移动语义",
           "沿着对象生命周期，观察所有权如何穿过语言边界。",
-          "/lang/cxx/0x/rvalue_ref",
+          "/language/cxx/0x/rvalue_ref",
+          "/note-covers/cpp-logo.webp",
         ],
         [
           "TOOLS",
           "构建可复用的 C++ 实验工具箱",
           "编译选项、Git 与可重复运行的最小实验。",
-          "/cc/gcc/options",
+          "/compile/gcc/options",
+          "/note-covers/gcc-logo.png",
         ],
-      ],
-);
-const sectors = computed(() =>
-  isEnglish.value
-    ? [
-        [
-          "01",
-          "Languages & Systems",
-          "C, C++, assembly, memory, and the machine beneath.",
-          "/en/lang/cxx/",
-        ],
-        [
-          "02",
-          "Interactive Lab",
-          "Run, change, and observe code directly in the browser.",
-          "/en/lab/",
-        ],
-        [
-          "03",
-          "Tools & Field Notes",
-          "Git, Bash, GCC, and commands worth keeping.",
-          "/en/git/cmd",
-        ],
-      ]
-    : [
-        [
-          "01",
-          "语言与系统",
-          "C、C++、汇编、内存，以及抽象层之下的机器。",
-          "/lang/cxx/",
-        ],
-        ["02", "交互实验室", "在浏览器中运行、修改并观察代码。", "/lab/"],
-        [
-          "03",
-          "工具与现场记录",
-          "Git、Bash、GCC，以及值得保留的命令。",
-          "/git/cmd",
-        ],
-      ],
-);
+      ];
+
+  return entries.map(([tag, title, description, url, fallbackCover]) => ({
+    tag,
+    title,
+    description,
+    url,
+    cover: noteData.find((note) => note.url === url)?.cover || fallbackCover,
+  }));
+});
+const homeNotes = computed(() => noteData.filter(note => note.locale === (isEnglish.value ? "en" : "zh")));
+const topicStats = computed(() => {
+  const counts = new Map<string, number>();
+  homeNotes.value.forEach(note => counts.set(note.topic, (counts.get(note.topic) || 0) + 1));
+  const total = homeNotes.value.length || 1;
+  return [...counts.entries()]
+    .map(([topic, count]) => ({ topic, count, percentage: Math.round(count / total * 1000) / 10 }))
+    .sort((a, b) => b.count - a.count || a.topic.localeCompare(b.topic));
+});
+const timeline = computed(() => [...homeNotes.value]
+  .sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title))
+  .slice(0, 6));
+function formatDate(date: string) {
+  if (!date) return isEnglish.value ? "UNDATED" : "待标注";
+  return new Intl.DateTimeFormat(isEnglish.value ? "en-US" : "zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(`${date}T00:00:00`));
+}
 
 function setTheme(id: ThemeId) {
   if (id === activeTheme.value) return;
@@ -366,7 +362,7 @@ onBeforeUnmount(() => {
               </h1>
               <strong>{{ text.lead }}</strong>
               <div>
-                <a :href="`${prefix}/lang/cxx/`">{{ text.enter }} <b>↗</b></a
+                <a :href="`${prefix}/language/cxx/`">{{ text.enter }} <b>↗</b></a
                 ><a :href="`${prefix}/lab/`">{{ text.lab }} <b>→</b></a>
               </div>
             </div>
@@ -449,19 +445,20 @@ onBeforeUnmount(() => {
         <div class="record-grid">
           <a
             v-for="(article, i) in articles"
-            :key="article[1]"
-            :href="article[3]"
+            :key="article.title"
+            :href="article.url"
             class="record reveal"
             :class="`r${i + 1}`"
           >
             <div class="record-art">
+              <img :src="article.cover" alt="" loading="lazy">
               <span>0{{ i + 1 }}</span
               ><i /><i /><i />
             </div>
             <div class="record-copy">
-              <span>{{ article[0] }}</span>
-              <h3>{{ article[1] }}</h3>
-              <p>{{ article[2] }}</p>
+              <span>{{ article.tag }}</span>
+              <h3>{{ article.title }}</h3>
+              <p>{{ article.description }}</p>
               <footer>
                 2026.08.{{ 24 - i * 3 }} · {{ 12 + i * 3 }} MIN <b>→</b>
               </footer>
@@ -519,21 +516,35 @@ onBeforeUnmount(() => {
           </div>
           <a :href="`${prefix}/archive`">VIEW ALL / 索引 ↗</a>
         </header>
-        <div class="sector-list">
-          <a
-            v-for="(sector, i) in sectors"
-            :key="sector[0]"
-            :href="sector[3]"
-            class="sector reveal"
-            :class="`r${i + 1}`"
-            ><span>{{ sector[0] }}</span>
-            <div>
-              <small>ACCESS CHANNEL / {{ sector[0] }}</small>
-              <h3>{{ sector[1] }}</h3>
-              <p>{{ sector[2] }}</p>
+        <div class="archive-dashboard reveal r2">
+          <section class="topic-overview">
+            <header>
+              <span>TOPIC DISTRIBUTION / 主题分布</span>
+              <b>{{ homeNotes.length }} NOTES</b>
+            </header>
+            <div class="topic-grid">
+              <a v-for="stat in topicStats" :key="stat.topic" :href="`${prefix}/archive`" class="topic-stat">
+                <span>{{ stat.topic }}</span>
+                <b>{{ stat.count }}</b>
+                <i><i :style="{ width: `${stat.percentage}%` }" /></i>
+                <small>{{ stat.percentage.toFixed(1) }}%</small>
+              </a>
             </div>
-            <b>↗</b></a
-          >
+          </section>
+          <section class="note-timeline">
+            <header>
+              <span>UPDATE TIMELINE / 时间线</span>
+              <b>{{ timeline.length }} LATEST</b>
+            </header>
+            <div>
+              <a v-for="(note, index) in timeline" :key="note.url" :href="note.url">
+                <time :datetime="note.date">{{ formatDate(note.date) }}</time>
+                <i />
+                <span><small>{{ note.topic }}</small><b>{{ note.title }}</b></span>
+                <em>{{ String(index + 1).padStart(2, "0") }}</em>
+              </a>
+            </div>
+          </section>
         </div>
         <div class="protocol reveal r3">
           <div class="wave">
@@ -625,7 +636,7 @@ onBeforeUnmount(() => {
   padding: 14px;
   scroll-margin-top: 64px;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
 }
 .frame,
 .content-frame {
@@ -1365,13 +1376,25 @@ onBeforeUnmount(() => {
   border-right: 1px solid var(--line);
   background: linear-gradient(145deg, #dff2f2, #f7f7f2 52%, #d8e0e1);
 }
+.record-art img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 32px 14px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 18px rgba(19, 34, 39, .2));
+  transition: transform .35s ease, filter .35s ease;
+}
+.record:hover .record-art img { transform: scale(1.07); filter: drop-shadow(0 15px 22px rgba(19, 34, 39, .3)); }
 .record-art:before {
   position: absolute;
   inset: -20%;
   content: "";
   border: 14px solid var(--home-secondary);
   transform: rotate(38deg);
-  opacity: 0.7;
+  opacity: 0.16;
 }
 .record-art span {
   position: absolute;
@@ -1385,7 +1408,7 @@ onBeforeUnmount(() => {
   position: absolute;
   right: 28%;
   bottom: -5%;
-  z-index: 2;
+  z-index: 0;
   width: 1px;
   height: 70%;
   background: var(--home-accent);
@@ -1539,6 +1562,73 @@ onBeforeUnmount(() => {
   color: var(--home-accent);
   font-size: 25px;
 }
+.archive-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(300px, .82fr);
+  min-height: 360px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .58);
+}
+.topic-overview,
+.note-timeline { min-width: 0; }
+.topic-overview { padding: 16px; border-right: 1px solid var(--line); }
+.topic-overview > header,
+.note-timeline > header {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font: 8px var(--vp-font-family-mono);
+  letter-spacing: .09em;
+}
+.topic-overview > header span,
+.note-timeline > header span { color: var(--home-accent); }
+.topic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 12px;
+}
+.topic-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 10px;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: rgba(255, 255, 255, .42);
+  text-decoration: none;
+  transition: border-color .2s, transform .2s, background .2s;
+}
+.topic-stat:hover { border-color: var(--home-accent); background: var(--home-soft); transform: translateY(-2px); }
+.topic-stat > span { overflow: hidden; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.topic-stat > b { color: var(--home-accent); font: 700 13px var(--vp-font-family-mono); }
+.topic-stat > i { align-self: center; overflow: hidden; height: 4px; background: var(--line); }
+.topic-stat > i > i { display: block; min-width: 3px; height: 100%; background: linear-gradient(90deg, var(--home-secondary), var(--home-accent)); }
+.topic-stat > small { color: var(--muted); font: 7px var(--vp-font-family-mono); text-align: right; }
+.note-timeline { padding: 16px; }
+.note-timeline > div { position: relative; padding-top: 5px; }
+.note-timeline a {
+  display: grid;
+  grid-template-columns: 42px 10px minmax(0, 1fr) 18px;
+  gap: 8px;
+  align-items: center;
+  min-height: 49px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+.note-timeline a:last-child { border-bottom: 0; }
+.note-timeline time { color: var(--muted); font: 8px var(--vp-font-family-mono); }
+.note-timeline a > i { position: relative; width: 7px; height: 7px; border: 2px solid var(--home-accent); border-radius: 50%; }
+.note-timeline a > i::after { position: absolute; top: 9px; left: 2px; width: 1px; height: 40px; content: ''; background: var(--line); }
+.note-timeline a:last-child > i::after { display: none; }
+.note-timeline a > span { display: grid; min-width: 0; }
+.note-timeline a small { color: var(--home-accent); font: 7px var(--vp-font-family-mono); }
+.note-timeline a span b { overflow: hidden; margin-top: 2px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.note-timeline em { color: var(--muted); font: 7px var(--vp-font-family-mono); }
+.note-timeline a:hover span b { color: var(--home-accent); }
 .protocol {
   display: grid;
   grid-template-columns: 1fr 1.7fr auto;
@@ -1639,7 +1729,9 @@ onBeforeUnmount(() => {
 :global(.dark .ark-home .telemetry),
 :global(.dark .ark-home .record),
 :global(.dark .ark-home .status-grid),
-:global(.dark .ark-home .protocol) { background: rgba(20, 27, 29, 0.7); }
+:global(.dark .ark-home .protocol),
+:global(.dark .ark-home .archive-dashboard) { background: rgba(20, 27, 29, 0.7); }
+:global(.dark .ark-home .topic-stat) { background: rgba(12, 18, 20, .5); }
 :global(.dark .ark-home .footer-column) { background: rgba(20, 27, 29, .72); }
 :global(.dark .ark-home .hero-stage) {
   background:
@@ -1821,6 +1913,8 @@ onBeforeUnmount(() => {
   .protocol {
     grid-template-columns: 1fr;
   }
+  .archive-dashboard { grid-template-columns: 1fr; }
+  .topic-overview { border-right: 0; border-bottom: 1px solid var(--line); }
 }
 @media (max-width: 600px) {
   .system-bar span:nth-child(2),
@@ -1898,6 +1992,8 @@ onBeforeUnmount(() => {
   .sector > b {
     display: none;
   }
+  .topic-grid { grid-template-columns: 1fr; }
+  .archive-dashboard { min-height: 0; }
   .footer-frame { min-height: auto; padding: 34px 18px; }
   .footer-links { grid-template-columns: 1fr; }
   .footer-column header b { display: none; }

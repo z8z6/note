@@ -78,7 +78,7 @@ async function translate(markdown, path) {
         'Return only the complete translated Markdown document.',
         'Preserve YAML frontmatter, HTML, Vue components, imports, code fences, code, inline code, URLs, filenames, and Markdown structure exactly unless prose itself needs translation.',
         'Do not add explanations or wrap the document in an extra code fence.',
-        'For absolute internal page links beginning with /, prefix the route with /en (for example /lang/cxx becomes /en/lang/cxx). Do not change asset links or already-localized /en links.',
+        'For absolute internal page links beginning with /, prefix the route with /en (for example /language/cxx becomes /en/language/cxx). Do not change asset links or already-localized /en links.',
       ].join(' '),
       input: `Source path: ${path}\n\n${markdown}`,
     }),

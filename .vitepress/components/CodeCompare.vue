@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import ComponentGroup from './ComponentGroup.vue'
 
 type CodeCompareItem = {
   title?: string
@@ -80,9 +81,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="code-compare" :class="{ 'is-merged': mergeHeaders }" :style="{ '--compare-min-width': `${minWidth}px` }">
+  <section class="code-compare" :class="{ 'is-merged': mergeHeaders }">
     <header class="code-compare__title"><span>{{ title }}</span><b>{{ columns.length }} CHANNELS</b></header>
-    <div class="code-compare__track">
+    <ComponentGroup
+      class="code-compare__track"
+      :slots="columns.length"
+      layout="row"
+      :min-width="minWidth"
+      :gap="mergeHeaders ? 0 : 12"
+      mobile="scroll"
+      bare
+    >
       <article v-for="(item, index) in columns" :key="`${item.title}-${index}`" class="code-compare__item">
         <header>
           <span><i />{{ item.title || `VERSION ${index + 1}` }}</span>
@@ -91,7 +100,7 @@ onBeforeUnmount(() => {
         </header>
         <pre><code v-html="item.highlighted" /></pre>
       </article>
-    </div>
+    </ComponentGroup>
   </section>
 </template>
 
@@ -99,16 +108,7 @@ onBeforeUnmount(() => {
 .code-compare { width: 100%; margin: 30px 0; font-family: var(--vp-font-family-mono); }
 .code-compare__title { display: flex; justify-content: space-between; padding: 0 4px 9px; color: var(--vp-c-text-3); font-size: 9px; letter-spacing: .12em; }
 .code-compare__title span { color: var(--operator-accent, var(--c-signal)); }
-.code-compare__track {
-  display: grid;
-  grid-auto-columns: minmax(var(--compare-min-width), 1fr);
-  grid-auto-flow: column;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 2px 2px 14px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ui-scroll-thumb) var(--ui-scroll-track);
-}
+:deep(.code-compare__track .component-group__items) { padding: 2px 2px 14px; }
 .code-compare__item {
   overflow: hidden;
   min-width: 0;
@@ -149,12 +149,11 @@ onBeforeUnmount(() => {
 :deep(.token-operator) { color: #cf222e; }
 :deep(.token-punctuation) { color: #57606a; }
 .code-compare.is-merged .code-compare__track {
-  gap: 0;
-  padding: 0;
   border: 1px solid rgba(255, 255, 255, .9);
   border-radius: 14px;
   background: rgba(255, 255, 255, .74);
 }
+.code-compare.is-merged :deep(.code-compare__track .component-group__items) { padding: 0; }
 .code-compare.is-merged .code-compare__item { border: 0; border-right: 1px solid var(--vp-c-divider); border-radius: 0; background: transparent; backdrop-filter: none; }
 .code-compare.is-merged .code-compare__item:last-child { border-right: 0; }
 :global(.dark .code-compare__item) { border-color: rgba(255, 255, 255, .09); background: rgba(17, 22, 24, .76); }
@@ -171,7 +170,6 @@ onBeforeUnmount(() => {
 :global(.dark .code-compare__item .token-type) { color: #76b7ff; }
 :global(.dark .code-compare__item .token-variable) { color: #dce5e8; }
 @media (max-width: 640px) {
-  .code-compare__track { grid-auto-columns: minmax(min(86vw, var(--compare-min-width)), 1fr); }
   .code-compare__title b { display: none; }
 }
 </style>

@@ -5,6 +5,7 @@
   "scripts": {
     "predev": "npm run translate",
     "dev": "vitepress dev",
+    "metadata": "node scripts/ensure-note-metadata.mjs",
     "translate": "node scripts/translate.mjs",
     "prebuild": "npm run translate",
     "build": "vitepress build",
