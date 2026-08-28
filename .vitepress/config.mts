@@ -142,6 +142,11 @@ export default defineConfig({
   sitemap: {
     hostname: 'https://cxxcxx.com',
   },
+  transformPageData(pageData) {
+    return {
+      description: pageData.title,
+    }
+  },
   markdown: {
     lineNumbers: true,
     image: { lazyLoading: true },
