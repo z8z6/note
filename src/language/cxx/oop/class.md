@@ -1,5 +1,6 @@
 ---
 cover: cpp
+date: 2025-04-20
 topic: "面向对象"
 keywords:
   - "C++"

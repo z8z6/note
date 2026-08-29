@@ -62,6 +62,7 @@ function defaults(path, source) {
   }
 
   return {
+    date: new Date().toISOString().slice(0, 10),
     cover,
     topic,
     keywords: [...new Set([language, topic, slug === 'index' ? title : slug].filter(Boolean))],
@@ -70,6 +71,7 @@ function defaults(path, source) {
 
 function metadataBlock(metadata) {
   return [
+    `date: ${metadata.date}`,
     `cover: ${metadata.cover}`,
     `topic: ${JSON.stringify(metadata.topic)}`,
     'keywords:',
@@ -88,9 +90,10 @@ function insertMissing(source, metadata) {
   if (end < 0) throw new Error('Unclosed frontmatter block')
   const frontmatter = source.slice(4, end)
   const missing = []
-  if (!/^cover:/m.test(frontmatter)) missing.push(fields[0])
-  if (!/^topic:/m.test(frontmatter)) missing.push(fields[1])
-  if (!/^keywords:/m.test(frontmatter)) missing.push(...fields.slice(2))
+  if (!/^date:/m.test(frontmatter)) missing.push(fields[0])
+  if (!/^cover:/m.test(frontmatter)) missing.push(fields[1])
+  if (!/^topic:/m.test(frontmatter)) missing.push(fields[2])
+  if (!/^keywords:/m.test(frontmatter)) missing.push(...fields.slice(3))
   if (!missing.length) return source
   return `${source.slice(0, end)}${newline}${missing.join(newline)}${source.slice(end)}`
 }

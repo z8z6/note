@@ -1,5 +1,6 @@
 ---
 cover: cpp
+date: 2025-04-20
 topic: "STL · 容器"
 keywords:
   - "C++"

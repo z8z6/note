@@ -1,5 +1,6 @@
 ---
 cover: git
+date: 2025-03-24
 topic: "版本控制"
 keywords:
   - "Git"

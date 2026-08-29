@@ -1,5 +1,6 @@
 ---
 cover: gcc
+date: 2025-03-24
 topic: "编译工具链"
 keywords:
   - "GCC"

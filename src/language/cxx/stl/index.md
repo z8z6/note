@@ -1,5 +1,6 @@
 ---
 cover: cpp
+date: 2025-04-20
 topic: "C++ 基础"
 keywords:
   - "C++"

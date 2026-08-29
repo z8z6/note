@@ -1,5 +1,6 @@
 ---
 cover: cpp
+date: 2025-04-09
 topic: "STL · 迭代器"
 keywords:
   - "C++"

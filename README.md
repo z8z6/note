@@ -33,6 +33,8 @@ tags:
 ---
 ```
 
+文章的 `date` 会显示在页面顶部；运行 `npm run metadata` 时，缺少该字段的新文章会自动使用当天日期。
+
 Markdown 中可以直接使用全局注册的交互组件：
 
 ```md
@@ -41,6 +43,41 @@ const example = `console.log('hello')`
 </script>
 
 <CodePlayground title="最小实验" :code="example" />
+```
+
+指令或语法可以用 `InstructionSlots` 拆成带释义的槽位。`separator` 表示当前槽位与前一槽位之间的原样分隔符，省略时使用一个空格；字段存在多种取值时，通过 `values` 显示为表格：
+
+```md
+<script setup>
+const instruction = [
+  { text: 'EVEX', label: '编码前缀', kind: 'prefix' },
+  { text: 'v', separator: '.', label: '向量形式', kind: 'mnemonic' },
+  { text: 'add', separator: '', label: '加法操作', kind: 'operation' },
+  {
+    text: 'p', separator: '', label: '数据排列', kind: 'shape',
+    values: [
+      { value: 'p', description: 'packed：多个元素' },
+      { value: 's', description: 'scalar：单个元素' }
+    ]
+  },
+  { text: 'd', separator: '', label: '双精度元素', kind: 'type' },
+  { text: '{k}', separator: '', label: '写掩码', kind: 'modifier' },
+  { text: '{z}', separator: '', label: '零化策略', kind: 'modifier' },
+  { text: 'xmm0', label: '目标操作数', description: '接收运算结果。' }
+]
+</script>
+
+<InstructionSlots title="EVEX VECTOR ADD" :parts="instruction" />
+```
+
+组件还接受 `:reference="{ href, label? }"`，用于在标题栏提供指令手册或规范页面的参考链接；外部链接会在新标签页打开：
+
+```md
+<InstructionSlots
+  title="EVEX VECTOR ADD"
+  :parts="instruction"
+  :reference="{ href: '/reference/evex', label: '指令手册' }"
+/>
 ```
 
 多张 Markdown 表格可以使用 `ParallelTables` 并排展示；每个直接子元素是一张表格面板，窄屏下会自动改为纵向布局：

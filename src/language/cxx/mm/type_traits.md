@@ -1,5 +1,6 @@
 ---
 cover: cpp
+date: 2025-04-09
 topic: "类型与内存"
 keywords:
   - "C++"

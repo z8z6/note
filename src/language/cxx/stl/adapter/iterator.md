@@ -1,5 +1,6 @@
 ---
 cover: cpp
+date: 2025-04-12
 topic: "STL · 适配器"
 keywords:
   - "C++"

@@ -1,5 +1,6 @@
 ---
 cover: i386
+date: 2025-04-09
 topic: "汇编与系统"
 keywords:
   - "i386"

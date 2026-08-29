@@ -1,5 +1,6 @@
 ---
 cover: c
+date: 2025-04-20
 topic: "C 语言"
 keywords:
   - "C"

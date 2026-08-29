@@ -27,6 +27,12 @@ async function fileDate(url: string) {
   }
 }
 
+function normalizedDate(value: unknown) {
+  if (!value) return ''
+  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  return String(value).match(/^\d{4}-\d{2}-\d{2}/)?.[0] || ''
+}
+
 const covers: Record<string, string> = {
   cxx: '/note-covers/cpp-logo.webp',
   cpp: '/note-covers/cpp-logo.webp',
@@ -105,7 +111,7 @@ export default createContentLoader([
         language: String(frontmatter.language || defaults.language),
         topic: String(frontmatter.topic || defaults.topic),
         keywords: keywords.length ? keywords : [defaults.language, defaults.topic],
-        date: String(frontmatter.date || await fileDate(url)),
+        date: normalizedDate(frontmatter.date) || await fileDate(url),
         locale: url.startsWith('/en/') ? 'en' : 'zh',
       }
     }))

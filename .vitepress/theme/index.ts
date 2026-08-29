@@ -14,6 +14,7 @@ import DocFieldFrame from '../components/DocFieldFrame.vue'
 import DocFieldFooter from '../components/DocFieldFooter.vue'
 import SidebarToggle from '../components/SidebarToggle.vue'
 import OperatorPageAura from '../components/OperatorPageAura.vue'
+import InstructionSlots from '../components/InstructionSlots.vue'
 import './style.css'
 
 export default {
@@ -38,6 +39,7 @@ export default {
     app.component('PieChart', PieChart)
     app.component('ComponentGroup', ComponentGroup)
     app.component('ComponentSlot', ComponentSlot)
+    app.component('InstructionSlots', InstructionSlots)
     if (typeof window !== 'undefined') {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
       document.documentElement.style.setProperty('--site-scrollbar-width', `${scrollbarWidth}px`)
