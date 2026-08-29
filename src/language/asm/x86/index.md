@@ -59,3 +59,9 @@ mov eax, [ebx + ecx*4 + 8]
 ```
 
 比例只能是 1、2、4、8。这种形式非常适合访问数组和结构体字段。
+
+## SIMD 指令
+
+- [ADDPD：打包双精度浮点加法](./addpd)
+- [VADDPD：向量双精度浮点加法与写掩码](./vaddpd)
+- [PACKUSWB：无符号饱和打包](./packuswb)

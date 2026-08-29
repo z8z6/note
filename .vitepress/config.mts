@@ -209,7 +209,10 @@ export default defineConfig({
           { text: 'C 函数', link: '/language/c/function' },
           { text: 'Bash', link: '/language/bash/bash' },
           { text: '汇编', link: '/language/asm/' },
-          { text: 'i386', link: '/language/asm/i386/' },
+          { text: 'x86', link: '/language/asm/x86/' },
+          { text: 'ADDPD', link: '/language/asm/x86/addpd' },
+          { text: 'VADDPD', link: '/language/asm/x86/vaddpd' },
+          { text: 'PACKUSWB', link: '/language/asm/x86/packuswb' },
         ] },
       ],
       '/lab/': [

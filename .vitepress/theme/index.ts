@@ -15,6 +15,9 @@ import DocFieldFooter from '../components/DocFieldFooter.vue'
 import SidebarToggle from '../components/SidebarToggle.vue'
 import OperatorPageAura from '../components/OperatorPageAura.vue'
 import InstructionSlots from '../components/InstructionSlots.vue'
+import RegisterLaneOperation from '../components/RegisterLaneOperation.vue'
+import MaskedLaneOperation from '../components/MaskedLaneOperation.vue'
+import PackSaturationOperation from '../components/PackSaturationOperation.vue'
 import './style.css'
 
 export default {
@@ -40,6 +43,9 @@ export default {
     app.component('ComponentGroup', ComponentGroup)
     app.component('ComponentSlot', ComponentSlot)
     app.component('InstructionSlots', InstructionSlots)
+    app.component('RegisterLaneOperation', RegisterLaneOperation)
+    app.component('MaskedLaneOperation', MaskedLaneOperation)
+    app.component('PackSaturationOperation', PackSaturationOperation)
     if (typeof window !== 'undefined') {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
       document.documentElement.style.setProperty('--site-scrollbar-width', `${scrollbarWidth}px`)

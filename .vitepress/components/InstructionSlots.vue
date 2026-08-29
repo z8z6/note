@@ -22,6 +22,7 @@ const props = withDefaults(defineProps<{
   parts: InstructionPart[]
   title?: string
   reference?: InstructionReference
+  instructionSet?: string | string[]
 }>(), {
   title: 'INSTRUCTION ANATOMY',
 })
@@ -29,6 +30,10 @@ const props = withDefaults(defineProps<{
 const activeIndex = ref<number | null>(null)
 const componentId = useId()
 const normalizedParts = computed(() => props.parts.filter(part => part.text && part.label))
+const instructionSets = computed(() => {
+  if (!props.instructionSet) return []
+  return Array.isArray(props.instructionSet) ? props.instructionSet : [props.instructionSet]
+})
 const instruction = computed(() => normalizedParts.value
   .map((part, index) => `${part.separator ?? (index === 0 ? '' : ' ')}${part.text}`)
   .join(''))
@@ -52,7 +57,8 @@ function slotStyle(index: number) {
     <figcaption class="instruction-slots__header">
       <span>{{ title }}</span>
       <span class="instruction-slots__meta">
-        <b>{{ normalizedParts.length }} SLOTS</b>
+        <b v-if="instructionSets.length" class="instruction-slots__isa">ISA · {{ instructionSets.join(' + ') }}</b>
+        <b class="instruction-slots__count">{{ normalizedParts.length }} SLOTS</b>
         <a
           v-if="reference?.href"
           :href="reference.href"
@@ -141,6 +147,7 @@ function slotStyle(index: number) {
 }
 .instruction-slots__header span { color: var(--operator-accent, var(--c-signal)); }
 .instruction-slots__header .instruction-slots__meta { display: flex; gap: 12px; align-items: center; color: var(--vp-c-text-3); }
+.instruction-slots__isa { padding: 2px 6px; border: 1px solid color-mix(in srgb, var(--operator-accent, var(--c-signal)) 35%, var(--vp-c-divider)); border-radius: 3px; color: var(--operator-accent, var(--c-signal)); font-size: 8px; }
 .instruction-slots__meta a { color: var(--operator-accent, var(--c-signal)); font-weight: 700; text-decoration: none; }
 .instruction-slots__meta a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .instruction-slots__meta i { font-style: normal; }
@@ -265,7 +272,7 @@ function slotStyle(index: number) {
 .instruction-slots__values td:first-child { width: 1%; white-space: nowrap; }
 .instruction-slots__values code { color: var(--slot-color); font-size: 10px; }
 @media (max-width: 640px) {
-  .instruction-slots__header b { display: none; }
+  .instruction-slots__count { display: none; }
   .instruction-slots__syntax { padding: 14px 12px; }
   .instruction-slots__legend { grid-template-columns: 1fr; }
   .instruction-slots__item { border-right: 0; }
