@@ -64,7 +64,11 @@ objdump -d -Mintel ./demo
 
 较长的指令语法可以拆成若干语义槽位，助记符内部也能继续按字母分段。将鼠标移到片段或释义上，或用键盘聚焦片段，可以看到二者的对应关系。
 
-<InstructionSlots title="EVEX VECTOR ADD" :parts="evexVaddpd" />
+<InstructionSlots
+  opcode="EVEX VECTOR ADD"
+  full-name="Vector Add Packed Double-Precision Floating-Point Values"
+  :parts="evexVaddpd"
+/>
 
 ## 一个最小示例
 

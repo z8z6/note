@@ -115,64 +115,19 @@ const text = computed(() =>
         footerLead: "项目、游戏与仍在持续更新的外部信号。",
       },
 );
-const articles = computed(() => {
-  const entries = isEnglish.value
-    ? [
-        [
-          "C++",
-          "Understanding std::expected in C++23",
-          "Error handling, expression design, and performance.",
-          "/en/language/cxx/",
-          "/note-covers/cpp-logo.webp",
-        ],
-        [
-          "SYSTEMS",
-          "Rvalue References and Move Semantics",
-          "Follow ownership through the abstraction layers.",
-          "/en/language/cxx/0x/rvalue_ref",
-          "/note-covers/cpp-logo.webp",
-        ],
-        [
-          "TOOLS",
-          "Building a Reusable C++ Field Kit",
-          "Compiler options, Git, and repeatable experiments.",
-          "/en/compile/gcc/options",
-          "/note-covers/gcc-logo.png",
-        ],
-      ]
-    : [
-        [
-          "C++",
-          "深入理解 C++23 的 std::expected",
-          "从错误处理到表达式设计，追踪抽象背后的实际成本。",
-          "/language/cxx/",
-          "/note-covers/cpp-logo.webp",
-        ],
-        [
-          "SYSTEMS",
-          "右值引用与移动语义",
-          "沿着对象生命周期，观察所有权如何穿过语言边界。",
-          "/language/cxx/0x/rvalue_ref",
-          "/note-covers/cpp-logo.webp",
-        ],
-        [
-          "TOOLS",
-          "构建可复用的 C++ 实验工具箱",
-          "编译选项、Git 与可重复运行的最小实验。",
-          "/compile/gcc/options",
-          "/note-covers/gcc-logo.png",
-        ],
-      ];
-
-  return entries.map(([tag, title, description, url, fallbackCover]) => ({
-    tag,
-    title,
-    description,
-    url,
-    cover: noteData.find((note) => note.url === url)?.cover || fallbackCover,
-  }));
-});
 const homeNotes = computed(() => noteData.filter(note => note.locale === (isEnglish.value ? "en" : "zh")));
+const articles = computed(() => [...homeNotes.value]
+  .sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title))
+  .slice(0, 3)
+  .map(note => ({
+    tag: note.topic,
+    title: note.title,
+    description: note.description,
+    url: note.url,
+    cover: note.cover,
+    date: note.date,
+    readingMinutes: note.readingMinutes,
+  })));
 const topicStats = computed(() => {
   const counts = new Map<string, number>();
   homeNotes.value.forEach(note => counts.set(note.topic, (counts.get(note.topic) || 0) + 1));
@@ -190,6 +145,9 @@ function formatDate(date: string) {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(`${date}T00:00:00`));
+}
+function formatRecordDate(date: string) {
+  return date ? date.replaceAll("-", ".") : "UNDATED";
 }
 
 function setTheme(id: ThemeId) {
@@ -460,7 +418,7 @@ onBeforeUnmount(() => {
               <h3>{{ article.title }}</h3>
               <p>{{ article.description }}</p>
               <footer>
-                2026.08.{{ 24 - i * 3 }} · {{ 12 + i * 3 }} MIN <b>→</b>
+                {{ formatRecordDate(article.date) }} · {{ article.readingMinutes }} MIN <b>→</b>
               </footer>
             </div>
           </a>

@@ -7,3 +7,4 @@
 - i386: Microsoft four-pane symbol, as selected by the site owner.
 - Git: official Git logomark (`git-scm.com/images/logos/downloads/Git-Icon-1788C.svg`), created by Jason Long and licensed under CC BY 3.0.
 - GCC: GNU package logo collection (`gnu.org/graphics/pkg-logos-250x100/gcc.250x100.png`).
+- LLVM: official Wyvern logo, large PNG (`llvm.org/img/LLVMWyvernBig.png`), downloaded from the LLVM project's official logo page.

@@ -86,7 +86,7 @@ function chunkHex(chunk: string) {
 
 function chunkStyle(chunk: string) {
   const ones = [...chunk].filter(bit => bit === '1').length
-  return { opacity: String(.22 + .78 * ones / chunk.length) }
+  return { opacity: String(.42 + .58 * ones / chunk.length) }
 }
 </script>
 
@@ -197,7 +197,7 @@ function chunkStyle(chunk: string) {
 .register-operation__bits { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 31px; padding: 11px 8px; border: 1px solid var(--vp-c-divider); border-radius: 7px; color: var(--register-accent); background: color-mix(in srgb, var(--vp-c-bg-soft) 80%, transparent); }
 .register-operation__bits i,
 .register-operation__legend i { display: block; width: 7px; height: 7px; box-sizing: border-box; border: 1px solid currentColor; border-radius: 50%; opacity: .45; }
-.register-operation__bits i { width: 9px; height: 9px; background: currentColor; box-shadow: 0 0 4px color-mix(in srgb, currentColor 45%, transparent); }
+.register-operation__bits i { width: 9px; height: 9px; background: currentColor; box-shadow: 0 0 6px color-mix(in srgb, currentColor 65%, transparent); }
 .register-operation__brace { display: block; width: calc(100% - 8px); height: 11px; margin: 2px 4px 0; overflow: visible; }
 .register-operation__brace path { fill: none; stroke: var(--register-accent); stroke-width: 1.1; vector-effect: non-scaling-stroke; }
 .register-operation__underbrace { display: flex; justify-content: center; gap: 7px; align-items: center; min-height: 20px; }
@@ -211,7 +211,7 @@ function chunkStyle(chunk: string) {
 .register-operation__register.is-result .register-operation__lane-label b { color: var(--register-accent); }
 .register-operation__legend { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 14px; border: 1px solid var(--vp-c-divider); border-top: 0; border-radius: 0 0 14px 14px; color: var(--vp-c-text-2); background: var(--vp-c-bg-soft); font: 10px/1.4 var(--vp-font-family-base); }
 .register-operation__legend span { display: flex; gap: 5px; align-items: center; }
-.register-operation__legend i { width: 8px; height: 8px; color: var(--register-accent); opacity: .8; background: currentColor; }
+.register-operation__legend i { width: 8px; height: 8px; color: var(--register-accent); opacity: 1; background: currentColor; }
 .register-operation__legend small { margin-left: auto; color: var(--vp-c-text-3); font-size: 9px; }
 @media (max-width: 640px) { .register-operation__inputs { grid-template-columns: 1fr; } }
 </style>

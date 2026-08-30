@@ -38,12 +38,14 @@ const packuswbParts = [
 `PACKUSWB`（Pack with Unsigned Saturation）把两个操作数中的有符号 word（`int16`）转换成无符号 byte（`uint8`），再打包进目标寄存器。转换采用饱和规则，不会简单截断高位。
 
 <InstructionSlots
-  title="66 0F 67 /r"
+  opcode="66 0F 67 /r"
+  full-name="Pack with Unsigned Saturation"
   :parts="packuswbParts"
   instruction-set="SSE2"
   :reference="{
     href: 'https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-2b-manual.pdf',
-    label: 'INTEL SDM'
+    label: 'INTEL SDM',
+    page: '待标注'
   }"
 />
 

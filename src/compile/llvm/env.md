@@ -1,5 +1,6 @@
 ---
 title: LLVM 环境配置与工具
+cover: llvm
 description: LLVM 的编译配置，以及相关工具的使用
 date: 2026-08-29
 topic: "LLVM"

@@ -67,16 +67,21 @@ const instruction = [
 ]
 </script>
 
-<InstructionSlots title="EVEX VECTOR ADD" :parts="instruction" />
+<InstructionSlots
+  opcode="EVEX VECTOR ADD"
+  full-name="Vector Add Packed Double-Precision Floating-Point Values"
+  :parts="instruction"
+/>
 ```
 
-组件还接受 `:reference="{ href, label? }"`，用于在标题栏提供指令手册或规范页面的参考链接；外部链接会在新标签页打开：
+组件还接受 `full-name` 英文全称与 `:reference="{ href, label?, page }"` 参考资料。`page` 用于标注手册页码；外部链接会在新标签页打开：
 
 ```md
 <InstructionSlots
-  title="EVEX VECTOR ADD"
+  opcode="EVEX VECTOR ADD"
+  full-name="Vector Add Packed Double-Precision Floating-Point Values"
   :parts="instruction"
-  :reference="{ href: '/reference/evex', label: '指令手册' }"
+  :reference="{ href: '/reference/evex', label: '指令手册', page: '2-123' }"
 />
 ```
 

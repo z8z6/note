@@ -38,12 +38,14 @@ const addpdParts = [
 `ADDPD`（Add Packed Double-Precision Floating-Point Values）是 SSE2 指令。它把两个 128 位操作数分别看成两个 IEEE 754 双精度浮点数，对相同位置的元素执行加法，再将两项结果写回目标 XMM 寄存器。
 
 <InstructionSlots
-  title="66 0F 58 /r"
+  opcode="66 0F 58 /r"
+  full-name="Add Packed Double-Precision Floating-Point Values"
   instruction-set="SSE2"
   :parts="addpdParts"
   :reference="{
     href: 'https://cdrdv2-public.intel.com/774492/325383-sdm-vol-2abcd.pdf',
-    label: 'INTEL SDM'
+    label: 'INTEL SDM',
+    page: '137'
   }"
 />
 

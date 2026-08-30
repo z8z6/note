@@ -66,12 +66,14 @@ const vaddpdParts = [
 `VADDPD` 是 `ADDPD` 的非破坏性向量形式。VEX 编码提供 128/256 位运算；EVEX 编码进一步提供 512 位向量、写掩码、零化、广播和嵌入舍入。
 
 <InstructionSlots
-  title="EVEX.512 · 66 0F 58 /r"
+  opcode="EVEX.512 · 66 0F 58 /r"
+  full-name="Vector Add Packed Double-Precision Floating-Point Values"
   :parts="vaddpdParts"
   instruction-set="AVX-512F"
   :reference="{
     href: 'https://cdrdv2-public.intel.com/868137/325462-089-sdm-vol-1-2abcd-3abcd-4.pdf',
-    label: 'INTEL SDM'
+    label: 'INTEL SDM',
+    page: '待标注'
   }"
 />
 

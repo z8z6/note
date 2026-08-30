@@ -1,4 +1,4 @@
-import { createContentLoader } from 'vitepress'
+import { createContentLoader, createMarkdownRenderer } from 'vitepress'
 import { stat } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,12 +6,14 @@ import { fileURLToPath } from 'node:url'
 export interface ArchiveNote {
   title: string
   description: string
+  descriptionHtml: string
   url: string
   cover: string
   language: string
   topic: string
   keywords: string[]
   date: string
+  readingMinutes: number
   locale: 'zh' | 'en'
 }
 
@@ -42,6 +44,7 @@ const covers: Record<string, string> = {
   i386: '/note-covers/microsoft.svg',
   git: '/note-covers/git-logo.svg',
   gcc: '/note-covers/gcc-logo.png',
+  llvm: '/note-covers/llvm-wyvern.png',
 }
 
 function metadata(url: string) {
@@ -61,7 +64,11 @@ function metadata(url: string) {
   if (/\/(?:lang|language)\/bash\//.test(route)) return { language: 'Bash', topic: 'Shell', cover: covers.bash }
   if (/\/(?:lang|language)\/asm\/i386\//.test(route)) return { language: 'i386', topic: '汇编与系统', cover: covers.i386 }
   if (/\/(?:lang|language)\/asm\//.test(route)) return { language: 'Assembly', topic: '汇编与系统', cover: covers.asm }
+  if (route.startsWith('/debug/gdb/')) return { language: 'GDB', topic: '调试与追踪', cover: covers.bash }
+  if (route.startsWith('/debug/strace/')) return { language: 'strace', topic: '调试与追踪', cover: covers.bash }
+  if (route.startsWith('/debug/')) return { language: 'Debug', topic: '调试与追踪', cover: covers.bash }
   if (route.startsWith('/git/') || route.startsWith('/tool/vcs/')) return { language: 'Git', topic: '版本控制', cover: covers.git }
+  if (route.startsWith('/compile/llvm/')) return { language: 'LLVM', topic: 'LLVM', cover: covers.llvm }
   return { language: 'GCC', topic: '编译工具链', cover: covers.gcc }
 }
 
@@ -77,22 +84,38 @@ function plainText(value = '') {
     .trim()
 }
 
+function markdownExcerpt(value = '') {
+  const blocks = value
+    .replace(/^---[\s\S]*?---\s*/, '')
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/^#{1,6}\s+.+$/gm, '')
+    .split(/\n\s*\n/)
+    .map(block => block.trim())
+    .filter(block => block && !block.startsWith('<') && !block.startsWith('|') && !block.startsWith(':::'))
+
+  return blocks[0] || plainText(value).slice(0, 180)
+}
+
 export default createContentLoader([
   'language/**/*.md',
   'lang/**/*.md',
   'cc/**/*.md',
   'compile/**/*.md',
+  'debug/**/*.md',
   'git/**/*.md',
   'tool/**/*.md',
   'en/language/**/*.md',
   'en/lang/**/*.md',
   'en/cc/**/*.md',
   'en/compile/**/*.md',
+  'en/debug/**/*.md',
   'en/git/**/*.md',
   'en/tool/**/*.md',
 ], {
   includeSrc: true,
   async transform(data): Promise<ArchiveNote[]> {
+    const markdown = await createMarkdownRenderer(sourceDir)
     const notes = await Promise.all(data.map(async ({ url, src = '', frontmatter }) => {
       const defaults = metadata(url)
       const heading = src.match(/^#\s+(.+)$/m)?.[1]?.trim()
@@ -102,19 +125,23 @@ export default createContentLoader([
         ? frontmatter.keywords
         : String(frontmatter.keywords || '').split(',')
       const keywords = configuredKeywords.map(String).map(value => value.trim()).filter(Boolean)
+      const description = String(frontmatter.description || markdownExcerpt(src))
+      const articleText = plainText(src.replace(/<script\b[\s\S]*?<\/script>/gi, ''))
 
       return {
         title: String(frontmatter.title || heading || url.split('/').filter(Boolean).at(-1) || 'Untitled'),
-        description: String(frontmatter.description || plainText(src).slice(0, 132)),
+        description: plainText(description).slice(0, 132),
+        descriptionHtml: markdown.render(description),
         url,
         cover,
         language: String(frontmatter.language || defaults.language),
         topic: String(frontmatter.topic || defaults.topic),
         keywords: keywords.length ? keywords : [defaults.language, defaults.topic],
         date: normalizedDate(frontmatter.date) || await fileDate(url),
+        readingMinutes: Math.max(1, Math.ceil(articleText.length / 400)),
         locale: url.startsWith('/en/') ? 'en' : 'zh',
       }
     }))
-    return notes.sort((a, b) => a.topic.localeCompare(b.topic) || a.title.localeCompare(b.title))
+    return notes.sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title))
   },
 })

@@ -149,6 +149,10 @@ export default defineConfig({
   },
   markdown: {
     lineNumbers: true,
+    languageAlias: {
+      cxx: 'cpp',
+      gdb: 'shellsession',
+    },
     image: { lazyLoading: true },
     theme: {
       light: 'github-light',
@@ -160,7 +164,6 @@ export default defineConfig({
     siteTitle: 'z8z6',
     nav: [
       { text: '首页', link: '/' },
-      { text: '知识库', link: '/language/cxx/' },
       { text: '实验室', link: '/lab/' },
       { text: '归档', link: '/archive' },
       { text: '关于', link: '/about' },
@@ -171,7 +174,6 @@ export default defineConfig({
         label: 'English',
         nav: [
           { text: 'Home', link: '/en/' },
-          { text: 'Knowledge Base', link: '/en/language/cxx/' },
           { text: 'Lab', link: '/en/lab/' },
           { text: 'Archive', link: '/en/archive' },
           { text: 'About', link: '/en/about' },
