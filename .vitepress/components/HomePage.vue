@@ -408,7 +408,7 @@ onBeforeUnmount(() => {
             class="record reveal"
             :class="`r${i + 1}`"
           >
-            <div class="record-art">
+            <div class="record-art" :class="{ 'is-riscv': article.cover.endsWith('/risc-v-logo.svg') }">
               <img :src="article.cover" alt="" loading="lazy">
               <span>0{{ i + 1 }}</span
               ><i /><i /><i />
@@ -1334,6 +1334,9 @@ onBeforeUnmount(() => {
   border-right: 1px solid var(--line);
   background: linear-gradient(145deg, #dff2f2, #f7f7f2 52%, #d8e0e1);
 }
+.record-art.is-riscv { background: #fff; }
+.record-art.is-riscv:before,
+.record-art.is-riscv i { display: none; }
 .record-art img {
   position: absolute;
   inset: 0;
@@ -1704,6 +1707,7 @@ onBeforeUnmount(() => {
 :global(.dark .ark-home .operators button.active),
 :global(.dark .ark-home .sector:hover) { background: color-mix(in srgb, var(--home-soft) 55%, rgba(23, 31, 34, .82)); }
 :global(.dark .ark-home .record-art) { background: linear-gradient(145deg, #18272a, #22292b 52%, #152023); }
+:global(.dark .ark-home .record-art.is-riscv) { background: #fff; }
 :global(.dark .ark-home .node-map circle) { fill: #182023; }
 :global(.dark .ark-home .switcher button) { color: #a8b2b5; background: rgba(20, 27, 29, 0.84); }
 :global(.dark .ark-home .heat > i) { background: rgba(255, 255, 255, 0.08); }

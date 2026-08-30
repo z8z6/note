@@ -41,6 +41,7 @@ const covers: Record<string, string> = {
   c: '/note-covers/c-family.png',
   bash: '/note-covers/terminal.svg',
   asm: '/note-covers/asm-logo.png',
+  riscv: '/note-covers/risc-v-logo.svg',
   i386: '/note-covers/microsoft.svg',
   git: '/note-covers/git-logo.svg',
   gcc: '/note-covers/gcc-logo.png',

@@ -101,6 +101,7 @@ onBeforeUnmount(() => revealObserver?.disconnect())
             :class="{
               'is-language-icon': note.cover.startsWith('/note-covers/'),
               'is-c-family': note.cover.endsWith('/c-family.png'),
+              'is-riscv': note.cover.endsWith('/risc-v-logo.svg'),
             }"
             :href="note.url"
             :aria-label="note.title"

@@ -1,5 +1,50 @@
 import { defineConfig } from 'vitepress'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+type MarkdownSidebarItem = {
+  text: string
+  link?: string
+  collapsed?: boolean
+  items?: MarkdownSidebarItem[]
+}
+
+function markdownTitle(path: string, fallback: string) {
+  const match = readFileSync(path, 'utf8').match(/^#\s+(.+)$/m)
+  return match?.[1]?.replace(/`/g, '') ?? fallback
+}
+
+function markdownTree(directory: string, urlBase: string): MarkdownSidebarItem[] {
+  const entries = readdirSync(directory, { withFileTypes: true })
+  const files = entries
+    .filter(entry => entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'index.md')
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'))
+    .map(entry => {
+      const slug = entry.name.slice(0, -3)
+      return {
+        text: markdownTitle(join(directory, entry.name), slug),
+        link: `${urlBase}/${encodeURIComponent(slug)}`,
+      }
+    })
+  const directories = entries
+    .filter(entry => entry.isDirectory())
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'))
+    .map(entry => {
+      const childDirectory = join(directory, entry.name)
+      const childUrl = `${urlBase}/${encodeURIComponent(entry.name)}`
+      return {
+        text: entry.name,
+        ...(existsSync(join(childDirectory, 'index.md')) ? { link: `${childUrl}/` } : {}),
+        collapsed: true,
+        items: markdownTree(childDirectory, childUrl),
+      }
+    })
+  return [...directories, ...files]
+}
+
+const x86NotesRoot = fileURLToPath(new URL('../src/language/asm/x86', import.meta.url))
+const rvvNotesRoot = fileURLToPath(new URL('../src/language/asm/riscv/V1.0', import.meta.url))
 
 const cxxSidebar = [
   {
@@ -211,10 +256,25 @@ export default defineConfig({
           { text: 'C 函数', link: '/language/c/function' },
           { text: 'Bash', link: '/language/bash/bash' },
           { text: '汇编', link: '/language/asm/' },
-          { text: 'x86', link: '/language/asm/x86/' },
-          { text: 'ADDPD', link: '/language/asm/x86/addpd' },
-          { text: 'VADDPD', link: '/language/asm/x86/vaddpd' },
-          { text: 'PACKUSWB', link: '/language/asm/x86/packuswb' },
+          {
+            text: 'x86',
+            link: '/language/asm/x86/',
+            collapsed: false,
+            items: markdownTree(x86NotesRoot, '/language/asm/x86'),
+          },
+          {
+            text: 'RISC-V',
+            link: '/language/asm/riscv/',
+            collapsed: false,
+            items: [
+              {
+                text: 'V1.0',
+                link: '/language/asm/riscv/V1.0/',
+                collapsed: false,
+                items: markdownTree(rvvNotesRoot, '/language/asm/riscv/V1.0'),
+              },
+            ],
+          },
         ] },
       ],
       '/lab/': [

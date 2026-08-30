@@ -730,6 +730,9 @@ html[data-operator] .VPNavBar { background: color-mix(in srgb, var(--operator-su
 .note-card:hover { border-color: color-mix(in srgb, var(--operator-accent, var(--c-signal)) 66%, var(--vp-c-divider)); box-shadow: var(--panel-shadow); transform: translateY(-5px); }
 .note-card__cover { position: relative; display: block; overflow: hidden; min-height: 220px; margin: 0; background: #172126; text-decoration: none !important; }
 .note-card__cover.is-language-icon { background: radial-gradient(circle at 50% 45%, #2a4049, #172126 62%, #111719); }
+.note-card__cover.is-riscv { background: #fff; }
+.note-card__cover.is-riscv::after { display: none; }
+.note-card__cover.is-riscv > i { color: #2c356d; }
 .note-card__cover::after { position: absolute; inset: 0; content: ''; background: linear-gradient(110deg, transparent 45%, rgba(255,255,255,.08) 45.5%, transparent 46%); }
 .note-card__cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .45s; }
 .note-card__cover.is-language-icon img { padding: 24px 32px; object-fit: contain; filter: drop-shadow(0 12px 18px rgba(0,0,0,.28)); }

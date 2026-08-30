@@ -62,6 +62,20 @@ mov eax, [ebx + ecx*4 + 8]
 
 ## SIMD 指令
 
-- [ADDPD：打包双精度浮点加法](./addpd)
-- [VADDPD：向量双精度浮点加法与写掩码](./vaddpd)
-- [PACKUSWB：无符号饱和打包](./packuswb)
+- [x86 向量指令全集](./vector-instructions)
+
+### SSE
+
+- [ADDPS：打包单精度浮点加法](./SSE/addps)
+- [MOVAPS：对齐打包单精度数据移动](./SSE/movaps)
+
+### SSE2
+
+- [ADDPD：打包双精度浮点加法](./SSE%202/addpd)
+- [MOVAPD：对齐打包双精度数据移动](./SSE%202/movapd)
+- [MOVUPD：非对齐打包双精度数据移动](./SSE%202/movupd)
+- [PACKUSWB：无符号饱和打包](./SSE%202/packuswb)
+
+### AVX-512
+
+- [VADDPD：向量双精度浮点加法与写掩码](./AVX512/vaddpd)
