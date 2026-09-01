@@ -12,23 +12,28 @@ const instructionParts = [
 ]
 </script>
 
-# vslide1down：插入标量并向下滑动一格
+# vslide1down
 
 `vslide1down.vx vd, vs2, rs1, vm` 固定滑动一个元素，并从寄存器标量向空出的边界位置插入一个值。
 
 <InstructionSlots opcode="OP-V · funct6=001110" full-name="Vector Slide One Down" instruction-set="RISC-V V 1.0" :parts="instructionParts" :reference="{ href: 'https://docs.riscv.org/reference/isa/v20260120/unpriv/v-st-ext.html', label: 'RISC-V V 1.0' }" />
 
-<RegisterOperation kind="vslide1down" initial-direction="down" :slide-one="true" :allow-direction-change="false" insert-label="x[rs1]" />
+<RegisterOperation kind="vslide1down" initial-direction="down" :slide-one="true" :allow-direction-change="false" insert-label="x[rs1]" instruction="vslide1down.vx v0, v8, a1" />
 
 ## 元素语义
 
 ```text
-vd[i] = (i + 1 < VLMAX) ? vs2[i + 1] : x[rs1]
+vstart <= i < vl-1: vd[i] = vs2[i + 1]
+vstart <= i = vl-1: vd[i] = x[rs1]
 ```
 
 元素 0 位于最低 SEW 位。仅修改 `vstart` 到 `vl-1` 的活动目标元素；来源与标量寄存器保持不变，尾部遵循 `vta`，被掩码元素遵循 `vma`，正常完成后 `vstart=0`。向上形式禁止目标组与来源组重叠；向下形式遵循规范规定的安全重叠约束。
 
 该指令不访问内存，没有内存对齐要求。它不修改 `fflags`、`vxrm` 或 `vxsat`。
+
+## 语义伪代码
+
+<InstructionPseudocode kind="vslide1down" />
 
 ## 示例
 

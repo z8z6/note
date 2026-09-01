@@ -6,10 +6,13 @@ type Architecture = 'riscv' | 'x86'
 type OperationClass = 'arithmetic' | 'logical' | 'compare' | 'convert' | 'move' | 'memory' | 'permute' | 'reduction' | 'mask' | 'state' | 'crypto'
 type SlideDirection = 'up' | 'down'
 type TailPolicy = 'tu' | 'ta'
+type MaskPolicy = 'mu' | 'ma'
+type Vxrm = 'rnu' | 'rne' | 'rdn' | 'rod'
 type MoveDirection = 'load' | 'store'
 
 const props = withDefaults(defineProps<{
   kind: string
+  instruction?: string
   architecture?: Architecture
   operationClass?: OperationClass
   vectorWidth?: number
@@ -95,12 +98,22 @@ const tailPolicyValue = ref<TailPolicy>(props.tailPolicy)
 const moveDirection = ref<MoveDirection>('load')
 const genericVectorWidth = ref(props.vectorWidth)
 const genericElementWidth = ref(props.elementWidth)
+const vsetInstructionKinds = new Set(['vsetvli', 'vsetivli', 'vsetvl'])
+const isRiscvVset = computed(() => vsetInstructionKinds.has(props.kind))
+const configRd = ref(5)
+const configRs1 = ref(10)
+const configRs2 = ref(11)
+const configAvl = ref(10)
+const maskPolicyValue = ref<MaskPolicy>('mu')
+const vxrmValue = ref<Vxrm>('rnu')
 const isX86Add = computed(() => props.kind === 'addps' || props.kind === 'addpd')
 const isX86Move = computed(() => props.kind === 'movaps' || props.kind === 'movapd' || props.kind === 'movupd')
 const slideInstructionKinds = new Set(['vslideup', 'vslidedown', 'vslide1up', 'vslide1down', 'vfslide1up', 'vfslide1down'])
 const isRiscvSlide = computed(() => slideInstructionKinds.has(props.kind))
+const isAveragingAdd = computed(() => props.kind === 'vaadd' || props.kind === 'vaaddu')
 const isSpecializedRiscv = computed(() => props.kind === 'vmerge' || isRiscvSlide.value)
-const isGenericOperation = computed(() => !isX86Add.value && !isX86Move.value && !isSpecializedRiscv.value)
+const isGenericOperation = computed(() => !isX86Add.value && !isX86Move.value && !isSpecializedRiscv.value && !isRiscvVset.value)
+const usesSecondVectorRegister = computed(() => props.kind === 'vmerge' || /\bv12\b/.test(props.instruction || ''))
 const x86LaneWidth = computed(() => props.kind === 'addps' ? 32 : 64)
 const x86LaneCount = computed(() => props.kind === 'addps' ? 4 : 2)
 const x86DisplayIndices = computed(() => Array.from({ length: x86LaneCount.value }, (_, index) => x86LaneCount.value - index - 1))
@@ -174,10 +187,71 @@ const genericRegisterStyle = computed(() => ({
   gridTemplateColumns: `repeat(${genericLaneCount.value}, ${elementDiameter}px)`,
   width: `${genericLaneCount.value * elementDiameter + Math.max(0, genericLaneCount.value - 1) * elementGap}px`,
 }))
-const genericSourceA = computed<LaneValue[]>(() => Array.from({ length: genericLaneCount.value }, (_, index) => props.source[index] ?? index + 1))
-const genericSourceB = computed<LaneValue[]>(() => Array.from({ length: genericLaneCount.value }, (_, index) => props.secondSource[index] ?? genericLaneCount.value + index + 1))
+function averagingSourceA(index: number): LaneValue {
+  const magnitude = BigInt(index % 16 + 1)
+  if (props.kind === 'vaadd') return -Number(magnitude)
+  return displayInteger((1n << BigInt(normalizedSew.value)) - magnitude)
+}
+
+const genericSourceA = computed<LaneValue[]>(() => Array.from({ length: genericLaneCount.value }, (_, index) => (
+  props.source[index] ?? (isAveragingAdd.value ? averagingSourceA(index) : index + 1)
+)))
+const genericSourceB = computed<LaneValue[]>(() => Array.from({ length: genericLaneCount.value }, (_, index) => {
+  if (props.secondSource[index] !== undefined) return props.secondSource[index]
+  if (isAveragingAdd.value) {
+    const magnitude = BigInt(index % 16 + 1)
+    // 与第一源相加后得到交替的 1、3；既展示符号解释差异，也保留 vxrm 的边界舍入差异。
+    return displayInteger(magnitude + (index % 2 === 0 ? 1n : 3n))
+  }
+  return genericLaneCount.value + index + 1
+}))
+
+function laneInteger(value: LaneValue, signed: boolean) {
+  let integer: bigint
+  try {
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return undefined
+      integer = BigInt(Math.trunc(value))
+    } else {
+      if (!/^[+-]?\d+$/.test(value.trim())) return undefined
+      integer = BigInt(value)
+    }
+  } catch {
+    return undefined
+  }
+  return signed
+    ? BigInt.asIntN(normalizedSew.value, integer)
+    : BigInt.asUintN(normalizedSew.value, integer)
+}
+
+function displayInteger(value: bigint): LaneValue {
+  const numeric = Number(value)
+  return Number.isSafeInteger(numeric) ? numeric : value.toString()
+}
+
+function averagingAddResult(index: number): LaneValue {
+  const signed = props.kind === 'vaadd'
+  const left = laneInteger(genericSourceA.value[index], signed)
+  const right = laneInteger(genericSourceB.value[index], signed)
+  if (left === undefined || right === undefined) return `avg${index}`
+
+  const sum = left + right
+  const truncated = sum >> 1n
+  const discarded = (sum & 1n) !== 0n
+  const truncatedIsOdd = (truncated & 1n) !== 0n
+  const increment = vxrmValue.value === 'rnu'
+    ? discarded
+    : vxrmValue.value === 'rne'
+      ? discarded && truncatedIsOdd
+      : vxrmValue.value === 'rod'
+        ? discarded && !truncatedIsOdd
+        : false
+
+  return displayInteger(truncated + (increment ? 1n : 0n))
+}
 
 function genericResult(index: number): LaneValue {
+  if (isAveragingAdd.value) return averagingAddResult(index)
   const left = Number(genericSourceA.value[index])
   const right = Number(genericSourceB.value[index])
   switch (props.operationClass) {
@@ -202,7 +276,136 @@ const genericDestinationRegisterName = computed(() => props.architecture === 'ri
 const genericRange = computed(() => props.architecture === 'riscv'
   ? `[${Math.max(0, normalizedVlen.value * normalizedLmul.value - 1)}:0]`
   : `[${normalizedGenericVectorWidth.value - 1}:0]`)
-const genericElementLabel = computed(() => props.architecture === 'riscv' ? `SEW=${normalizedSew.value}` : `${normalizedGenericElementWidth.value} bits`)
+const averagingInterpretation = computed(() => props.kind === 'vaadd' ? '有符号二补码' : '无符号整数')
+const averagingBitPatternExample = computed(() => {
+  const allOnes = (1n << BigInt(normalizedSew.value)) - 1n
+  const bits = `0x${allOnes.toString(16).toUpperCase().padStart(normalizedSew.value / 4, '0')}`
+  return `${bits} = ${props.kind === 'vaadd' ? '-1' : allOnes.toString()}`
+})
+const genericElementLabel = computed(() => {
+  if (isAveragingAdd.value) return `${props.kind === 'vaadd' ? 'i' : 'u'}${normalizedSew.value}`
+  return props.architecture === 'riscv' ? `SEW=${normalizedSew.value}` : `${normalizedGenericElementWidth.value} bits`
+})
+
+const vsewEncoding = computed(() => ({ 8: 0b000, 16: 0b001, 32: 0b010, 64: 0b011 }[normalizedSew.value] ?? 0b010))
+const vlmulEncoding = computed(() => ({
+  '0.125': 0b101,
+  '0.25': 0b110,
+  '0.5': 0b111,
+  '1': 0b000,
+  '2': 0b001,
+  '4': 0b010,
+  '8': 0b011,
+}[String(normalizedLmul.value)] ?? 0b000))
+const vtypeLowByte = computed(() =>
+  (maskPolicyValue.value === 'ma' ? 0x80 : 0)
+  | (tailPolicyValue.value === 'ta' ? 0x40 : 0)
+  | (vsewEncoding.value << 3)
+  | vlmulEncoding.value)
+const vtypeBitRows = computed(() => [
+  { bit: 7, name: 'vma', value: (vtypeLowByte.value >> 7) & 1, meaning: maskPolicyValue.value === 'ma' ? 'ma：被掩码元素可保持旧值或写全 1' : 'mu：被掩码元素保持旧值' },
+  { bit: 6, name: 'vta', value: (vtypeLowByte.value >> 6) & 1, meaning: tailPolicyValue.value === 'ta' ? 'ta：尾部元素可保持旧值或写全 1' : 'tu：尾部元素保持旧值' },
+  { bit: 5, name: 'vsew[2]', value: (vsewEncoding.value >> 2) & 1, meaning: `与位 4、3 组成 vsew=${binary(vsewEncoding.value, 3)}，选择 SEW=${normalizedSew.value}` },
+  { bit: 4, name: 'vsew[1]', value: (vsewEncoding.value >> 1) & 1, meaning: `与位 5、3 共同编码元素宽度 SEW=${normalizedSew.value}` },
+  { bit: 3, name: 'vsew[0]', value: vsewEncoding.value & 1, meaning: `与位 5、4 共同编码元素宽度 SEW=${normalizedSew.value}` },
+  { bit: 2, name: 'vlmul[2]', value: (vlmulEncoding.value >> 2) & 1, meaning: `与位 1、0 组成 vlmul=${binary(vlmulEncoding.value, 3)}，选择 ${lmulLabel(normalizedLmul.value)}` },
+  { bit: 1, name: 'vlmul[1]', value: (vlmulEncoding.value >> 1) & 1, meaning: `与位 2、0 共同编码 ${lmulLabel(normalizedLmul.value)}` },
+  { bit: 0, name: 'vlmul[0]', value: vlmulEncoding.value & 1, meaning: `与位 2、1 共同编码 ${lmulLabel(normalizedLmul.value)}` },
+])
+const vsetEncodingFields = computed(() => {
+  const common = [
+    { range: '19:15', name: props.kind === 'vsetivli' ? 'uimm[4:0]' : 'rs1', value: props.kind === 'vsetivli' ? binary(configAvl.value, 5) : binary(configRs1.value, 5), meaning: props.kind === 'vsetivli' ? `零扩展 AVL=${configAvl.value}` : `整数寄存器 x${configRs1.value} 提供 AVL` },
+    { range: '14:12', name: 'funct3', value: '111', meaning: '向量配置指令的固定功能码' },
+    { range: '11:7', name: 'rd', value: binary(configRd.value, 5), meaning: `x${configRd.value} 接收新的 vl；rd=x0 时只更新 CSR` },
+    { range: '6:0', name: 'opcode', value: '1010111', meaning: 'OP-V 主操作码' },
+  ]
+  if (props.kind === 'vsetvli') return [
+    { range: '31', name: '固定', value: '0', meaning: '区分 vsetvli 与另外两种配置指令' },
+    { range: '30:20', name: 'vtypei[10:0]', value: `${binary(0, 3)}${binary(vtypeLowByte.value, 8)}`, meaning: '位 10:8 必须为 0；位 7:0 按下表写入 vtype' },
+    ...common,
+  ]
+  if (props.kind === 'vsetivli') return [
+    { range: '31:30', name: '固定', value: '11', meaning: '选择立即数 AVL 形式' },
+    { range: '29:20', name: 'vtypei[9:0]', value: `${binary(0, 2)}${binary(vtypeLowByte.value, 8)}`, meaning: '位 9:8 必须为 0；位 7:0 按下表写入 vtype' },
+    ...common,
+  ]
+  return [
+    { range: '31', name: '固定', value: '1', meaning: '选择寄存器 vtype 形式' },
+    { range: '30:25', name: '固定', value: '000000', meaning: 'vsetvl 的保留编码位，必须全为 0' },
+    { range: '24:20', name: 'rs2', value: binary(configRs2.value, 5), meaning: `x${configRs2.value} 提供完整 XLEN 位 vtype 值` },
+    ...common,
+  ]
+})
+const operationInstruction = computed(() => {
+  if (props.architecture !== 'riscv') {
+    if (isX86Move.value) {
+      const register = props.registerLabel.replace(/（.*$/, '')
+      return moveDirection.value === 'load'
+        ? `${props.kind.toUpperCase()} ${register}, ${props.memoryLabel}`
+        : `${props.kind.toUpperCase()} ${props.memoryLabel}, ${register}`
+    }
+    let instruction = props.instruction || `${props.kind.toUpperCase()} ${genericX86Prefix.value}0, ${genericX86Prefix.value}1`
+    instruction = instruction.replace(/\b(?:mm|xmm|ymm|zmm)(\d+)\b/gi, (_match: string, index: string) => `${genericX86Prefix.value}${index}`)
+    instruction = instruction.replace(/\bm(?:128|256|512)\b/gi, `m${normalizedGenericVectorWidth.value}`)
+    return `${instruction}  ; ${normalizedGenericVectorWidth.value}-bit vector, ${normalizedGenericElementWidth.value}-bit element`
+  }
+  if (props.kind === 'vmerge') {
+    return `vmerge.vvm v${destinationRegisterValue.value}, v${sourceRegisterValue.value}, v${secondSourceRegisterValue.value}, v0`
+  }
+  if (isRiscvSlide.value) {
+    const destination = `v${destinationRegisterValue.value}`
+    const source = `v${sourceRegisterValue.value}`
+    if (!props.slideOne) return `${props.kind}.vi ${destination}, ${source}, ${normalizedOffset.value}, v0.t`
+    const scalar = props.kind.startsWith('vf') ? 'fa0' : 'a1'
+    return `${props.kind}.${props.kind.startsWith('vf') ? 'vf' : 'vx'} ${destination}, ${source}, ${scalar}, v0.t`
+  }
+
+  let instruction = props.instruction || props.kind
+  instruction = instruction.replace(/^(\S+\s+)v0\b/, '$1__RVV_VD__')
+  instruction = instruction.replace(/\bv8\b/g, '__RVV_VS2__')
+  instruction = instruction.replace(/\bv12\b/g, '__RVV_VS1__')
+  instruction = instruction
+    .replace('__RVV_VD__', `v${destinationRegisterValue.value}`)
+    .replace(/__RVV_VS2__/g, `v${sourceRegisterValue.value}`)
+    .replace(/__RVV_VS1__/g, `v${secondSourceRegisterValue.value}`)
+  return instruction
+})
+const riscvConfigurationInstructions = computed(() => {
+  const avl = normalizedVl.value
+  const lmul = lmulLabel(normalizedLmul.value).split(' · ')[0]
+  const lines = [
+    `li a0, ${avl}`,
+    `vsetvli t0, a0, e${normalizedSew.value}, ${lmul}, ${tailPolicyValue.value}, ${maskPolicyValue.value}  # VLEN=${normalizedVlen.value}`,
+  ]
+  if (isAveragingAdd.value) {
+    const encoding: Record<Vxrm, number> = { rnu: 0, rne: 1, rdn: 2, rod: 3 }
+    lines.push(`csrwi vxrm, ${encoding[vxrmValue.value]}  # ${vxrmValue.value}`)
+  }
+  if (isSpecializedRiscv.value && normalizedVstart.value > 0) {
+    if (normalizedVstart.value <= 31) lines.push(`csrwi vstart, ${normalizedVstart.value}`)
+    else lines.push(`li t1, ${normalizedVstart.value}`, 'csrw vstart, t1')
+  }
+  lines.push(operationInstruction.value)
+  return lines.join('\n')
+})
+const displayedInstruction = computed(() => {
+  if (!isRiscvVset.value) {
+    return props.architecture === 'riscv' ? riscvConfigurationInstructions.value : operationInstruction.value
+  }
+  const rd = `x${configRd.value}`
+  const type = `e${normalizedSew.value}, ${lmulLabel(normalizedLmul.value).split(' · ')[0]}, ${tailPolicyValue.value}, ${maskPolicyValue.value}`
+  const implementation = `# VLEN=${normalizedVlen.value}`
+  if (props.kind === 'vsetivli') return `vsetivli ${rd}, ${configAvl.value}, ${type}  ${implementation}`
+  if (props.kind === 'vsetvl') {
+    const vtype = `0x${vtypeLowByte.value.toString(16).padStart(2, '0').toUpperCase()}`
+    return `li x${configRs2.value}, ${vtype}\nvsetvl ${rd}, x${configRs1.value}, x${configRs2.value}  ${implementation}`
+  }
+  return `vsetvli ${rd}, x${configRs1.value}, ${type}  ${implementation}`
+})
+
+function binary(value: number, width: number) {
+  return Math.max(0, Math.round(value)).toString(2).padStart(width, '0').slice(-width)
+}
 
 const normalizedVlen = computed(() => Math.max(128, Math.round(vlenValue.value)))
 const normalizedSew = computed(() => [8, 16, 32, 64].includes(Math.round(sewValue.value)) ? Math.round(sewValue.value) : 32)
@@ -253,6 +456,13 @@ function laneState(index: number) {
   return 'body'
 }
 
+function isSlideOneDownInsertion(index: number) {
+  return props.slideOne
+    && direction.value === 'down'
+    && normalizedVl.value > 0
+    && index === normalizedVl.value - 1
+}
+
 function resultAt(index: number) {
   const oldValue = valueAt(oldDestinationValues.value, index)
   const state = laneState(index)
@@ -270,6 +480,10 @@ function resultAt(index: number) {
       value: useSecond ? valueAt(secondSourceValues.value, index) : valueAt(sourceValues.value, index),
       source: useSecond ? props.secondSourceLabel : props.sourceLabel,
     }
+  }
+
+  if (isSlideOneDownInsertion(index)) {
+    return { value: props.insertValue, source: props.insertLabel }
   }
 
   if (direction.value === 'up') {
@@ -318,6 +532,7 @@ function lmulLabel(value: number) {
 
 const slideMappings = computed(() => displayIndices.value.flatMap(destinationIndex => {
   if (laneState(destinationIndex) !== 'body') return []
+  if (isSlideOneDownInsertion(destinationIndex)) return []
   const sourceIndex = direction.value === 'up'
     ? destinationIndex - normalizedOffset.value
     : destinationIndex + normalizedOffset.value
@@ -407,7 +622,7 @@ const validationIssues = computed(() => {
   if (!Number.isInteger(destinationRegisterValue.value) || destinationRegisterValue.value < 0 || destinationRegisterValue.value > 31) {
     issues.push({ level: 'error', text: 'destination-register 必须是 v0…v31 范围内的整数编号。' })
   }
-  if (props.kind === 'vmerge' && (!Number.isInteger(secondSourceRegisterValue.value) || secondSourceRegisterValue.value < 0 || secondSourceRegisterValue.value > 31)) {
+  if (usesSecondVectorRegister.value && (!Number.isInteger(secondSourceRegisterValue.value) || secondSourceRegisterValue.value < 0 || secondSourceRegisterValue.value > 31)) {
     issues.push({ level: 'error', text: 'second-source-register 必须是 v0…v31 范围内的整数编号。' })
   }
 
@@ -418,12 +633,12 @@ const validationIssues = computed(() => {
     if (destinationRegisterValue.value % integerLmul !== 0) {
       issues.push({ level: 'error', text: `目标寄存器组必须按 LMUL=${integerLmul} 对齐，v${destinationRegisterValue.value} 不是合法的起始寄存器。` })
     }
-    if (props.kind === 'vmerge' && secondSourceRegisterValue.value % integerLmul !== 0) {
+    if (usesSecondVectorRegister.value && secondSourceRegisterValue.value % integerLmul !== 0) {
       issues.push({ level: 'error', text: `第二源寄存器组必须按 LMUL=${integerLmul} 对齐，v${secondSourceRegisterValue.value} 不是合法的起始寄存器。` })
     }
   }
 
-  if (sourceGroup.end > 31 || destinationGroup.end > 31 || (props.kind === 'vmerge' && secondSourceGroup.end > 31)) {
+  if (sourceGroup.end > 31 || destinationGroup.end > 31 || (usesSecondVectorRegister.value && secondSourceGroup.end > 31)) {
     issues.push({ level: 'error', text: '寄存器组越过 v31，属于保留编码。' })
   }
 
@@ -444,11 +659,71 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
 </script>
 
 <template>
-  <figure v-if="isX86Add" class="rv-register-operation rv-register-operation--x86">
+  <figure v-if="isRiscvVset" class="rv-register-operation rv-register-operation--vset">
+    <figcaption>
+      <span>{{ kind.toUpperCase() }} · VECTOR CONFIGURATION</span>
+      <strong>32-BIT INSTRUCTION · XLEN-WIDE VTYPE</strong>
+    </figcaption>
+    <code class="rv-register-operation__instruction">{{ displayedInstruction }}</code>
+
+    <div class="rv-register-operation__controls">
+      <div class="rv-register-operation__parameters">
+        <label><span><b>SEW</b><small>vtype[5:3] · 元素宽度</small></span><select v-model.number="sewValue"><option v-for="value in [8, 16, 32, 64]" :key="value" :value="value">e{{ value }}</option></select></label>
+        <label><span><b>LMUL</b><small>vtype[2:0] · 寄存器组倍率</small></span><select v-model.number="lmulValue"><option v-for="value in [.125, .25, .5, 1, 2, 4, 8]" :key="value" :value="value">{{ lmulLabel(value) }}</option></select></label>
+        <label><span><b>尾部策略</b><small>vtype[6] · vta</small></span><select v-model="tailPolicyValue"><option value="tu">tu · 0</option><option value="ta">ta · 1</option></select></label>
+        <label><span><b>掩码策略</b><small>vtype[7] · vma</small></span><select v-model="maskPolicyValue"><option value="mu">mu · 0</option><option value="ma">ma · 1</option></select></label>
+        <label><span><b>rd</b><small>接收新 vl 的整数寄存器编号</small></span><input v-model.number="configRd" type="number" min="0" max="31"></label>
+        <label v-if="kind !== 'vsetivli'"><span><b>rs1</b><small>保存 AVL 的整数寄存器编号</small></span><input v-model.number="configRs1" type="number" min="0" max="31"></label>
+        <label v-else><span><b>uimm</b><small>5 位零扩展 AVL（0…31）</small></span><input v-model.number="configAvl" type="number" min="0" max="31"></label>
+        <label v-if="kind === 'vsetvl'"><span><b>rs2</b><small>保存完整 vtype 的整数寄存器编号</small></span><input v-model.number="configRs2" type="number" min="0" max="31"></label>
+        <div class="rv-register-operation__derived"><span><b>vtype[7:0]</b><small>当前低 8 位结果</small></span><output>0b{{ binary(vtypeLowByte, 8) }} · 0x{{ vtypeLowByte.toString(16).padStart(2, '0').toUpperCase() }}</output></div>
+        <div class="rv-register-operation__derived"><span><b>VLMAX</b><small>LMUL × VLEN ÷ SEW（示例 VLEN={{ normalizedVlen }}）</small></span><output>{{ vlmaxValue }} 个元素</output></div>
+      </div>
+    </div>
+
+    <div class="rv-register-operation__vset-diagram">
+      <section>
+        <header><strong>32 位指令编码</strong><span>每个框说明相应位段的来源与作用</span></header>
+        <div class="rv-register-operation__encoding-row">
+          <article v-for="field in vsetEncodingFields" :key="`${field.range}-${field.name}`">
+            <small>bit {{ field.range }}</small>
+            <strong>{{ field.name }}</strong>
+            <code>{{ field.value }}</code>
+            <p>{{ field.meaning }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <header><strong>写入 vtype 的每一位</strong><span>RV32 布局；RV64 仅将 vill 移到 bit 63</span></header>
+        <div class="rv-register-operation__vtype-prefix">
+          <article><small>bit XLEN−1</small><strong>vill</strong><code>0</code><p>硬件接受配置时为 0；不支持任一位组合时置 1，并把其余位及 vl 清零。</p></article>
+          <article><small>bit XLEN−2:8</small><strong>reserved</strong><code>全 0</code><p>每一位都必须写 0；任一位非零都是不支持的 vtype。vsetvl 会检查 rs2 的全部 XLEN 位。</p></article>
+        </div>
+        <div class="rv-register-operation__vtype-bits">
+          <article v-for="field in vtypeBitRows" :key="field.bit" :class="{ 'is-one': field.value === 1 }">
+            <small>bit {{ field.bit }}</small>
+            <strong>{{ field.name }}</strong>
+            <code>{{ field.value }}</code>
+            <p>{{ field.meaning }}</p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <span><i class="body" />修改选项后，编码位与含义同步更新</span>
+      <span><i class="changed" /><code>vl</code> 由 AVL、VLMAX 与规范约束共同确定，并写入 rd</span>
+      <small>配置指令不读写向量寄存器元素</small>
+    </footer>
+  </figure>
+
+  <figure v-else-if="isX86Add" class="rv-register-operation rv-register-operation--x86">
     <figcaption>
       <span>{{ kind.toUpperCase() }} · PACKED REGISTER OPERATION · 128 BITS</span>
       <strong>{{ x86LaneCount }} × FLOAT{{ x86LaneWidth }}</strong>
     </figcaption>
+    <code class="rv-register-operation__instruction">{{ displayedInstruction }}</code>
 
     <div class="rv-register-operation__bit-diagram rv-register-operation__x86-diagram">
       <section v-for="(row, rowIndex) in x86Rows" :key="row.label" :class="{ result: row.result }">
@@ -484,6 +759,7 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
       <span>{{ kind.toUpperCase() }} · PACKED BIT COPY · 128 BITS</span>
       <strong>{{ x86MoveLaneCount }} × FLOAT{{ x86MoveLaneWidth }}</strong>
     </figcaption>
+    <code class="rv-register-operation__instruction">{{ displayedInstruction }}</code>
 
     <div class="rv-register-operation__controls rv-register-operation__move-controls">
       <div aria-label="复制方向">
@@ -527,6 +803,7 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
       <span>{{ kind.toUpperCase() }} · REGISTER OPERATION</span>
       <strong>{{ architecture.toUpperCase() }} · {{ operationClass.toUpperCase() }}</strong>
     </figcaption>
+    <code class="rv-register-operation__instruction">{{ displayedInstruction }}</code>
 
     <div class="rv-register-operation__controls">
       <div v-if="architecture === 'riscv'" class="rv-register-operation__parameters">
@@ -535,8 +812,11 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
         <label><span><b>LMUL</b><small>一个逻辑寄存器组占用的寄存器数</small></span><select v-model.number="lmulValue" @change="refreshParameters"><option :value="0.125">mf8</option><option :value="0.25">mf4</option><option :value="0.5">mf2</option><option :value="1">m1</option><option :value="2">m2</option><option :value="4">m4</option><option :value="8">m8</option></select></label>
         <label><span><b>vl</b><small>本次执行的活动元素数量</small></span><input v-model.number="vlValue" type="number" min="0" @input="refreshParameters"></label>
         <label><span><b>源寄存器</b><small>来源寄存器组起始编号</small></span><input v-model.number="sourceRegisterValue" type="number" min="0" max="31" @input="refreshParameters"></label>
+        <label v-if="usesSecondVectorRegister"><span><b>第二源寄存器</b><small>第二来源或索引寄存器组起始编号</small></span><input v-model.number="secondSourceRegisterValue" type="number" min="0" max="31" @input="refreshParameters"></label>
         <label><span><b>目标寄存器</b><small>目标寄存器组起始编号</small></span><input v-model.number="destinationRegisterValue" type="number" min="0" max="31" @input="refreshParameters"></label>
         <label><span><b>尾部策略</b><small>vl 以后的目标元素处理方式</small></span><select v-model="tailPolicyValue" @change="refreshParameters"><option value="tu">tu · 保持</option><option value="ta">ta · agnostic</option></select></label>
+        <label><span><b>掩码策略</b><small>被掩码目标元素的处理方式</small></span><select v-model="maskPolicyValue" @change="refreshParameters"><option value="mu">mu · 保持</option><option value="ma">ma · agnostic</option></select></label>
+        <label v-if="isAveragingAdd"><span><b>vxrm</b><small>定点平均结果的舍入模式</small></span><select v-model="vxrmValue" @change="refreshParameters"><option value="rnu">rnu · 最近，平局向上</option><option value="rne">rne · 最近，平局取偶</option><option value="rdn">rdn · 截断</option><option value="rod">rod · 舍入到奇数</option></select></label>
         <div class="rv-register-operation__derived"><span><b>VLMAX</b><small>LMUL × VLEN ÷ SEW</small></span><output>{{ laneCount }}</output></div>
       </div>
       <div v-else class="rv-register-operation__parameters">
@@ -552,29 +832,29 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
 
     <div :key="animationNonce" class="rv-register-operation__bit-diagram rv-register-operation__x86-diagram">
       <section>
-        <header><strong>{{ sourceLabel }} · {{ genericSourceRegisterName }}</strong><span>第一来源</span></header>
+        <header><strong>{{ sourceLabel }} · {{ genericSourceRegisterName }}</strong><span>{{ isAveragingAdd ? `第一来源 · ${averagingInterpretation}` : '第一来源' }}</span></header>
         <div class="rv-register-operation__physical-ranges" :style="{ gridTemplateColumns: '1fr', width: genericRegisterStyle.width }"><span><b>{{ genericSourceRegisterName }}</b><code>{{ genericRange }}</code></span></div>
         <div class="rv-register-operation__bit-register" :style="genericRegisterStyle">
           <div v-for="index in genericDisplayIndices" :key="index" class="rv-register-operation__bit-lane"><small>{{ sourceLabel }}[{{ index }}]</small><b>{{ genericSourceA[index] }}</b><em>{{ genericElementLabel }}</em></div>
         </div>
       </section>
-      <section v-if="!['move', 'memory', 'state', 'reduction'].includes(operationClass)">
-        <header><strong>{{ secondSourceLabel }} · {{ genericSecondRegisterName }}</strong><span>第二来源</span></header>
+      <section v-if="usesSecondVectorRegister || !['move', 'memory', 'state', 'reduction'].includes(operationClass)">
+        <header><strong>{{ secondSourceLabel }} · {{ genericSecondRegisterName }}</strong><span>{{ isAveragingAdd ? `第二来源 · ${averagingInterpretation}` : '第二来源' }}</span></header>
         <div class="rv-register-operation__physical-ranges" :style="{ gridTemplateColumns: '1fr', width: genericRegisterStyle.width }"><span><b>{{ genericSecondRegisterName }}</b><code>{{ genericRange }}</code></span></div>
         <div class="rv-register-operation__bit-register" :style="genericRegisterStyle">
           <div v-for="index in genericDisplayIndices" :key="index" class="rv-register-operation__bit-lane"><small>{{ secondSourceLabel }}[{{ index }}]</small><b>{{ genericSourceB[index] }}</b><em>{{ genericElementLabel }}</em></div>
         </div>
       </section>
       <section class="result">
-        <header><strong>{{ destinationLabel }} · {{ genericDestinationRegisterName }}（结果）</strong><span>{{ operationClass }}</span></header>
+        <header><strong>{{ destinationLabel }} · {{ genericDestinationRegisterName }}（结果）</strong><span>{{ isAveragingAdd ? `${averagingInterpretation}平均` : operationClass }}</span></header>
         <div class="rv-register-operation__physical-ranges" :style="{ gridTemplateColumns: '1fr', width: genericRegisterStyle.width }"><span><b>{{ genericDestinationRegisterName }}</b><code>{{ genericRange }}</code></span></div>
         <div class="rv-register-operation__bit-register" :style="genericRegisterStyle">
-          <div v-for="(index, displayIndex) in genericDisplayIndices" :key="index" class="rv-register-operation__bit-lane is-changed" :style="{ animationDelay: `${displayIndex * 35 + 80}ms` }"><small>{{ destinationLabel }}[{{ index }}]</small><b>{{ genericResult(index) }}</b><em>{{ operationClass }}</em></div>
+          <div v-for="(index, displayIndex) in genericDisplayIndices" :key="index" class="rv-register-operation__bit-lane is-changed" :style="{ animationDelay: `${displayIndex * 35 + 80}ms` }"><small>{{ destinationLabel }}[{{ index }}]</small><b>{{ genericResult(index) }}</b><em>{{ isAveragingAdd ? `平均 · ${vxrmValue}` : operationClass }}</em></div>
         </div>
       </section>
     </div>
 
-    <footer><span><i class="body" />每个圆球代表一个完整元素</span><span><i class="changed" />强调背景：目标写入</span><small>高索引在左、低索引在右</small></footer>
+    <footer><span><i class="body" />每个圆球代表一个完整元素</span><span><i class="changed" />强调背景：目标写入</span><span v-if="isAveragingAdd"><code>{{ kind }}</code> 按{{ averagingInterpretation }}解释：{{ averagingBitPatternExample }}</span><small>高索引在左、低索引在右</small></footer>
   </figure>
 
   <figure v-else class="rv-register-operation" :class="{ 'has-parameter-error': parameterErrors.length > 0 }">
@@ -582,6 +862,7 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
       <span>RVV REGISTER OPERATION</span>
       <strong>{{ kind === 'vmerge' ? 'MASK MERGE' : `${slideOne ? 'SLIDE1' : 'SLIDE'} ${direction.toUpperCase()}` }}</strong>
     </figcaption>
+    <code class="rv-register-operation__instruction">{{ displayedInstruction }}</code>
 
     <div class="rv-register-operation__controls">
       <div class="rv-register-operation__parameters">
@@ -618,6 +899,13 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
           <select v-model="tailPolicyValue" @change="refreshParameters">
             <option value="tu">tu · 保持原值</option>
             <option value="ta">ta · agnostic</option>
+          </select>
+        </label>
+        <label>
+          <span><b>掩码策略</b><small>vtype.vma：被掩码目标元素如何处理</small></span>
+          <select v-model="maskPolicyValue" @change="refreshParameters">
+            <option value="mu">mu · 保持原值</option>
+            <option value="ma">ma · agnostic</option>
           </select>
         </label>
         <label>
@@ -801,7 +1089,9 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
 .rv-register-operation { --rv-accent: #2c356d; margin: 28px 0; font-family: var(--vp-font-family-mono); }
 .rv-register-operation > figcaption { display: flex; justify-content: space-between; gap: 12px; padding: 0 4px 9px; color: var(--rv-accent); font-size: 9px; letter-spacing: .12em; }
 .rv-register-operation > figcaption strong { color: var(--vp-c-text-3); font-size: 9px; }
+.rv-register-operation__instruction { display: block; box-sizing: border-box; width: 100%; margin: 0; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--rv-accent) 35%, var(--vp-c-divider)); border-bottom: 0; border-radius: 10px 10px 0 0; color: var(--rv-accent); background: color-mix(in srgb, var(--rv-accent) 7%, var(--vp-c-bg)); font: 750 12px/1.55 var(--vp-font-family-mono); overflow-wrap: anywhere; white-space: pre-wrap; }
 .rv-register-operation__controls { padding: 12px 14px; border: 1px solid var(--vp-c-divider); border-bottom: 0; border-radius: 14px 14px 0 0; background: var(--vp-c-bg-soft); }
+.rv-register-operation__instruction + .rv-register-operation__controls { border-radius: 0; }
 .rv-register-operation__parameters { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; margin-bottom: 10px; }
 .rv-register-operation__parameters label { display: grid; grid-template-rows: 1fr auto; gap: 7px; min-width: 0; padding: 9px; border: 1px solid var(--vp-c-divider); border-radius: 7px; background: color-mix(in srgb, var(--vp-c-bg) 72%, transparent); }
 .rv-register-operation__derived { display: grid; grid-template-rows: 1fr auto; gap: 7px; min-width: 0; padding: 9px; border: 1px dashed color-mix(in srgb, var(--rv-accent) 55%, var(--vp-c-divider)); border-radius: 7px; background: color-mix(in srgb, var(--rv-accent) 5%, var(--vp-c-bg)); }
@@ -842,6 +1132,25 @@ const parameterErrors = computed(() => validationIssues.value.filter(issue => is
 .rv-register-operation__mask-control small { font-size: 8px; }
 .rv-register-operation__mask-control b { font-size: 12px; }
 .rv-register-operation__bit-diagram { overflow-x: auto; padding: 18px; border: 1px solid color-mix(in srgb, var(--rv-accent) 22%, var(--vp-c-divider)); background: linear-gradient(90deg, color-mix(in srgb, var(--rv-accent) 5%, transparent) 1px, transparent 1px), linear-gradient(color-mix(in srgb, var(--rv-accent) 5%, transparent) 1px, transparent 1px), color-mix(in srgb, var(--vp-c-bg-elv) 90%, transparent); background-size: 24px 24px; box-shadow: var(--panel-shadow); }
+.rv-register-operation__vset-diagram { overflow-x: auto; padding: 18px; border: 1px solid color-mix(in srgb, var(--rv-accent) 22%, var(--vp-c-divider)); background: linear-gradient(90deg, color-mix(in srgb, var(--rv-accent) 5%, transparent) 1px, transparent 1px), linear-gradient(color-mix(in srgb, var(--rv-accent) 5%, transparent) 1px, transparent 1px), color-mix(in srgb, var(--vp-c-bg-elv) 90%, transparent); background-size: 24px 24px; box-shadow: var(--panel-shadow); }
+.rv-register-operation__vset-diagram > section { min-width: 760px; }
+.rv-register-operation__vset-diagram > section + section { margin-top: 22px; padding-top: 20px; border-top: 1px dashed color-mix(in srgb, var(--rv-accent) 32%, var(--vp-c-divider)); }
+.rv-register-operation__vset-diagram header { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; margin-bottom: 9px; color: var(--vp-c-text-2); font: 650 11px/1.4 var(--vp-font-family-base); }
+.rv-register-operation__vset-diagram header span { color: var(--vp-c-text-3); font: 8px var(--vp-font-family-mono); }
+.rv-register-operation__encoding-row { display: flex; align-items: stretch; min-width: max-content; }
+.rv-register-operation__encoding-row article { display: grid; grid-template-rows: auto auto auto 1fr; gap: 4px; width: 124px; min-width: 0; padding: 10px; border: 1px solid var(--rv-accent); border-right: 0; background: color-mix(in srgb, var(--rv-accent) 6%, var(--vp-c-bg)); }
+.rv-register-operation__encoding-row article:last-child { border-right: 1px solid var(--rv-accent); }
+.rv-register-operation__vtype-prefix { display: grid; grid-template-columns: minmax(160px, .8fr) minmax(380px, 2.2fr); gap: 8px; margin-bottom: 8px; }
+.rv-register-operation__vtype-bits { display: grid; grid-template-columns: repeat(8, minmax(94px, 1fr)); gap: 0; }
+.rv-register-operation__vtype-prefix article,
+.rv-register-operation__vtype-bits article { display: grid; grid-template-rows: auto auto auto 1fr; gap: 4px; min-width: 0; padding: 10px; border: 1px solid color-mix(in srgb, var(--rv-accent) 55%, var(--vp-c-divider)); background: color-mix(in srgb, var(--rv-accent) 5%, var(--vp-c-bg)); }
+.rv-register-operation__vtype-bits article { border-right: 0; }
+.rv-register-operation__vtype-bits article:last-child { border-right: 1px solid color-mix(in srgb, var(--rv-accent) 55%, var(--vp-c-divider)); }
+.rv-register-operation__vtype-bits article.is-one { background: color-mix(in srgb, #2b9270 16%, var(--vp-c-bg)); }
+.rv-register-operation__vset-diagram article small { color: var(--vp-c-text-3); font-size: 8px; }
+.rv-register-operation__vset-diagram article strong { color: var(--rv-accent); font-size: 10px; }
+.rv-register-operation__vset-diagram article code { width: max-content; padding: 2px 5px; color: #237a5e; background: color-mix(in srgb, #2b9270 10%, var(--vp-c-bg)); font-size: 10px; font-weight: 800; }
+.rv-register-operation__vset-diagram article p { margin: 2px 0 0; color: var(--vp-c-text-2); font: 9px/1.5 var(--vp-font-family-base); }
 .rv-register-operation__bit-diagram > section { min-width: max-content; }
 .rv-register-operation__bit-diagram > section > header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; color: var(--vp-c-text-2); font: 650 11px/1.4 var(--vp-font-family-base); }
 .rv-register-operation__bit-diagram > section > header span { color: var(--vp-c-text-3); font: 8px var(--vp-font-family-mono); }

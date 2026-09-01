@@ -8,14 +8,14 @@ keywords: ["RISC-V", "RVV 1.0", "vslide1up", "向量插入"]
 <script setup>
 const parts = [
   { text: 'vslide1up.vx', label: '插入并向上滑动一格', kind: 'mnemonic', description: '在最低元素插入整数标量，其余源元素移动到高一个索引。' },
-  { text: 'v8', label: '目标寄存器组', kind: 'destination', description: '接收插入和滑动结果；LMUL=2 时占用 v8–v9。' },
-  { text: 'v10', separator: ', ', label: '源寄存器组', kind: 'source', description: '元素 i 被复制到目标元素 i+1；LMUL=2 时占用 v10–v11。' },
-  { text: 'a0', separator: ', ', label: '插入值', kind: 'source', description: '最低 XLEN 位整数标量按照 SEW 截断或符号扩展。' },
-  { text: 'v0.t', separator: ', ', label: '可选执行掩码', kind: 'mask', description: '逐目标元素控制是否写入；无掩码时省略。' },
+  { text: 'vd', label: '目标寄存器组', kind: 'destination', description: '接收插入和滑动结果。' },
+  { text: 'vs2', separator: ', ', label: '源寄存器组', kind: 'source', description: '元素 i 被复制到目标元素 i+1。' },
+  { text: 'rs1', separator: ', ', label: '插入值', kind: 'source', description: '整数寄存器中的最低 XLEN 位标量按照 SEW 截断或符号扩展。' },
+  { text: 'vm', separator: ', ', label: '可选执行掩码', kind: 'mask', description: '掩码操作数逐目标元素控制是否写入；无掩码形式可省略。' },
 ]
 </script>
 
-# vslide1up：插入标量并向上滑动一格
+# vslide1up
 
 `vslide1up.vx` 把整数寄存器中的标量写入 `vd[0]`，并把 `vs2[i-1]` 写入 `vd[i]`。它等价于带标量插入的固定偏移 1 上滑。
 
@@ -33,8 +33,7 @@ const parts = [
   :insert-value="99"
   insert-label="x[a0]"
   initial-direction="up"
-  :allow-direction-change="false"
-/>
+  :allow-direction-change="false" instruction="vslide1up.vx v8, v10, a2" />
 
 ## 等价操作
 
@@ -45,6 +44,10 @@ for i = vstart .. vl-1:
 ```
 
 浮点对应形式为 `vfslide1up.vf vd, vs2, fs1, vm`，它从浮点寄存器取得一个 SEW 宽元素；本页演示整数形式。
+
+## 语义伪代码
+
+<InstructionPseudocode kind="vslide1up" />
 
 ## 注意点
 

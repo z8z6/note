@@ -15,6 +15,7 @@ import DocFieldFooter from '../components/DocFieldFooter.vue'
 import SidebarToggle from '../components/SidebarToggle.vue'
 import OperatorPageAura from '../components/OperatorPageAura.vue'
 import InstructionSlots from '../components/InstructionSlots.vue'
+import InstructionPseudocode from '../components/InstructionPseudocode.vue'
 import MaskedLaneOperation from '../components/MaskedLaneOperation.vue'
 import PackSaturationOperation from '../components/PackSaturationOperation.vue'
 import RegisterOperation from '../components/RegisterOperation.vue'
@@ -43,6 +44,7 @@ export default {
     app.component('ComponentGroup', ComponentGroup)
     app.component('ComponentSlot', ComponentSlot)
     app.component('InstructionSlots', InstructionSlots)
+    app.component('InstructionPseudocode', InstructionPseudocode)
     app.component('MaskedLaneOperation', MaskedLaneOperation)
     app.component('PackSaturationOperation', PackSaturationOperation)
     app.component('RegisterOperation', RegisterOperation)

@@ -8,14 +8,14 @@ keywords: ["RISC-V", "RVV 1.0", "vslideup", "向量滑动"]
 <script setup>
 const parts = [
   { text: 'vslideup.vx', label: '向高索引滑动', kind: 'mnemonic', description: '把 vs2 的元素移动到更高的目标索引；.vx 的偏移量来自整数寄存器。' },
-  { text: 'v8', label: '目标寄存器组', kind: 'destination', description: '接收结果；在 LMUL=2 时占用 v8–v9，不能与源寄存器组重叠。' },
-  { text: 'v10', separator: ', ', label: '源寄存器组', kind: 'source', description: '提供待滑动元素；在 LMUL=2 时占用 v10–v11。' },
-  { text: 'a0', separator: ', ', label: '元素偏移', kind: 'offset', description: '按照无符号 XLEN 位整数解释，不会截断到 SEW。' },
-  { text: 'v0.t', separator: ', ', label: '可选执行掩码', kind: 'mask', description: 'v0[i] 控制目标元素 i；无掩码时省略。' },
+  { text: 'vd', label: '目标寄存器组', kind: 'destination', description: '接收结果；不能与源寄存器组重叠。' },
+  { text: 'vs2', separator: ', ', label: '源寄存器组', kind: 'source', description: '提供待滑动元素。' },
+  { text: 'rs1', separator: ', ', label: '元素偏移', kind: 'offset', description: '整数寄存器中的值按无符号 XLEN 位整数解释，不会截断到 SEW。' },
+  { text: 'vm', separator: ', ', label: '可选执行掩码', kind: 'mask', description: '掩码操作数控制目标元素；无掩码形式可省略。' },
 ]
 </script>
 
-# vslideup：向高索引滑动元素
+# vslideup
 
 `vslideup` 把 `vs2[i-OFFSET]` 写入更高索引的 `vd[i]`。低于偏移量的 body 元素不会被此指令写入。
 
@@ -31,8 +31,7 @@ const parts = [
   kind="vslideup"
   :initial-offset="2"
   initial-direction="up"
-  :allow-direction-change="false"
-/>
+  :allow-direction-change="false" instruction="vslideup.vi v8, v10, 2" />
 
 ## 指令形式
 
@@ -45,6 +44,10 @@ const parts = [
 for i = max(vstart, OFFSET) .. vl-1:
     if mask[i]: vd[i] = vs2[i-OFFSET]
 ```
+
+## 语义伪代码
+
+<InstructionPseudocode kind="vslideup" />
 
 ## 注意点
 

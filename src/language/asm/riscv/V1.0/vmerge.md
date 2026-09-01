@@ -47,7 +47,7 @@ const vmergeParts = [
 ]
 </script>
 
-# vmerge：按掩码合并向量元素
+# vmerge
 
 RISC-V `V` 扩展 1.0 的 vmerge 指令依据 `v0` 的每个掩码位，从 `vs2` 与第二来源中选择元素。第二来源可以是向量、整数寄存器或 5 位有符号立即数。
 
@@ -66,8 +66,7 @@ RISC-V `V` 扩展 1.0 的 vmerge 指令依据 `v0` 的每个掩码位，从 `vs2
 <RegisterOperation
   kind="vmerge"
   :mask="[0, 1, 0, 1, 1, 0, 0, 0]"
-  :destination-register="4"
-/>
+  :destination-register="4" instruction="vmerge.vim v16, v8, -1,  v0" />
 
 ## 指令形式
 
@@ -103,6 +102,10 @@ for i = vstart .. vl-1:
 ```
 
 其中 `second_source[i]` 对 `.vvm` 是 `vs1[i]`，对 `.vxm` 和 `.vim` 则是广播到所有 body 元素的标量值。与普通 masked 向量运算不同，vmerge 会写入 `vstart` 到 `vl-1` 的每个 body 元素。
+
+## 语义伪代码
+
+<InstructionPseudocode kind="vmerge" />
 
 ## 注意点
 

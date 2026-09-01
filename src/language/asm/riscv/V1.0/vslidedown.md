@@ -8,14 +8,14 @@ keywords: ["RISC-V", "RVV 1.0", "vslidedown", "向量滑动"]
 <script setup>
 const parts = [
   { text: 'vslidedown.vx', label: '向低索引滑动', kind: 'mnemonic', description: '把更高源索引的元素写入较低目标索引；.vx 偏移来自整数寄存器。' },
-  { text: 'v8', label: '目标寄存器组', kind: 'destination', description: '接收结果；LMUL=2 时占用 v8–v9，并允许与源组重叠。' },
-  { text: 'v10', separator: ', ', label: '源寄存器组', kind: 'source', description: '可读取当前 vl 以外、但仍位于 VLMAX 内的元素。' },
-  { text: 'a0', separator: ', ', label: '元素偏移', kind: 'offset', description: '按照无符号 XLEN 位整数解释。' },
-  { text: 'v0.t', separator: ', ', label: '可选执行掩码', kind: 'mask', description: 'v0[i] 控制目标元素 i；无掩码时省略。' },
+  { text: 'vd', label: '目标寄存器组', kind: 'destination', description: '接收结果，并允许与源寄存器组重叠。' },
+  { text: 'vs2', separator: ', ', label: '源寄存器组', kind: 'source', description: '可读取当前 vl 以外、但仍位于 VLMAX 内的元素。' },
+  { text: 'rs1', separator: ', ', label: '元素偏移', kind: 'offset', description: '整数寄存器中的值按无符号 XLEN 位整数解释。' },
+  { text: 'vm', separator: ', ', label: '可选执行掩码', kind: 'mask', description: '掩码操作数控制目标元素；无掩码形式可省略。' },
 ]
 </script>
 
-# vslidedown：向低索引滑动元素
+# vslidedown
 
 `vslidedown` 把 `vs2[i+OFFSET]` 写入 `vd[i]`。源索引仍在 `VLMAX` 内时，即使超过当前 `vl` 也可以读取；达到或超过 `VLMAX` 时结果为 0。
 
@@ -31,8 +31,7 @@ const parts = [
   kind="vslidedown"
   :initial-offset="2"
   initial-direction="down"
-  :allow-direction-change="false"
-/>
+  :allow-direction-change="false" instruction="vslidedown.vi v8, v10, 2" />
 
 ## 指令形式
 
@@ -46,6 +45,10 @@ for i = vstart .. vl-1:
     if mask[i]:
         vd[i] = (i+OFFSET < VLMAX) ? vs2[i+OFFSET] : 0
 ```
+
+## 语义伪代码
+
+<InstructionPseudocode kind="vslidedown" />
 
 ## 注意点
 
